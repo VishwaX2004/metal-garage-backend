@@ -2,11 +2,16 @@ import express from 'express';
 import mongoose from 'mongoose';
 import userRouter from './routes/userRouter.js';
 import jwt from 'jsonwebtoken';
+import dotenv from "dotenv";
+import cors from 'cors';
 
+dotenv.config();
 
 const app = express();
 
 app.use(express.json());
+app.use(cors())
+
 
 app.use(
     (req, res, next) => {
@@ -14,7 +19,7 @@ app.use(
 
         if (token != null) {
             token = token.replace("Bearer ", "")
-            jwt.verify(token, "jwt-secret", 
+            jwt.verify(token, process.env.JWT_SECRET, 
                 (err,decoded) => {
                     if(decoded == null){
                         res.json({
@@ -31,7 +36,7 @@ app.use(
     }
 )
 
-const connectionString = "";
+const connectionString = process.env.MONGO_URI;
 
 mongoose.connect(connectionString).then(
     () => {
