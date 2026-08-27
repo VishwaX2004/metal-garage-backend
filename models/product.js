@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const productSchema = new mongoose.Schema(
   {
-    // Unique product identifier
+
     productID: {
       type: String,
       required: true,
@@ -10,33 +10,33 @@ const productSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Product name
+
     name: {
       type: String,
       required: true,
       trim: true,
     },
 
-    // Alternative names / search keywords
+
     altNames: {
       type: [String],
       default: [],
     },
 
-    // Product description
+
     description: {
       type: String,
       required: true,
     },
 
-    // Product images
+
     images: {
       type: [String],
       required: true,
       default: [],
     },
 
-    // Product category
+
     category: {
       type: String,
       required: true,
@@ -48,7 +48,7 @@ const productSchema = new mongoose.Schema(
       ],
     },
 
-    // Single car or car pack
+
     productType: {
       type: String,
       required: true,
@@ -58,7 +58,7 @@ const productSchema = new mongoose.Schema(
       ],
     },
 
-    // Number of cars included
+
     carCount: {
       type: Number,
       required: true,
@@ -66,21 +66,21 @@ const productSchema = new mongoose.Schema(
       default: 1,
     },
 
-    // Price
+
     price: {
       type: Number,
       required: true,
       min: 0,
     },
 
-    // Original / marked price
+
     labelledPrice: {
       type: Number,
       required: true,
       min: 0,
     },
 
-    // Available quantity
+
     quantity: {
       type: Number,
       required: true,
@@ -88,39 +88,37 @@ const productSchema = new mongoose.Schema(
       default: 0,
     },
 
-    // Hot Wheels release year
+
     year: {
       type: Number,
       required: true,
     },
 
-    // Series name
+
     series: {
       type: String,
       required: true,
       trim: true,
     },
 
-    // Car model / casting
+
     casting: {
       type: String,
       required: true,
       trim: true,
     },
 
-    // Manufacturer of the real/fantasy vehicle
     manufacturer: {
       type: String,
       trim: true,
     },
 
-    // Vehicle model
+
     model: {
       type: String,
       trim: true,
     },
 
-    // Vehicle type
     vehicleType: {
       type: String,
       enum: [
@@ -140,25 +138,25 @@ const productSchema = new mongoose.Schema(
       default: "Other",
     },
 
-    // Main color
+
     color: {
       type: String,
       trim: true,
     },
 
-    // Scale
+
     scale: {
       type: String,
       default: "1:64",
     },
 
-    // Number of the car in a series
+
     seriesNumber: {
       type: String,
       trim: true,
     },
 
-    // Packaging / condition
+
     condition: {
       type: String,
       enum: [
@@ -170,7 +168,7 @@ const productSchema = new mongoose.Schema(
       default: "New",
     },
 
-    // Packaging type
+
     packaging: {
       type: String,
       enum: [
@@ -182,19 +180,19 @@ const productSchema = new mongoose.Schema(
       default: "Carded",
     },
 
-    // Whether product is currently available
+
     inStock: {
       type: Boolean,
       default: true,
     },
 
-    // Featured product
+
     featured: {
       type: Boolean,
       default: false,
     },
 
-    // Product status
+
     status: {
       type: String,
       enum: [
@@ -211,7 +209,7 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// Automatically update stock status
+
 productSchema.pre("save", function (next) {
   if (this.quantity <= 0) {
     this.inStock = false;
