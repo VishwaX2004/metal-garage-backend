@@ -1,334 +1,345 @@
 import mongoose from "mongoose";
 
-const productSchema =
-    new mongoose.Schema(
-        {
-            // =====================================================
-            // BASIC INFORMATION
-            // =====================================================
+// =============================================================
+// PRODUCT SCHEMA
+// =============================================================
 
-            productID: {
-                type: String,
-                required: true,
-                unique: true,
-                trim: true,
-            },
+const productSchema = new mongoose.Schema(
+    {
+        // =====================================================
+        // BASIC INFORMATION
+        // =====================================================
 
-            name: {
-                type: String,
-                required: true,
-                trim: true,
-            },
-
-            altNames: {
-                type: [String],
-                default: [],
-            },
-
-            description: {
-                type: String,
-                required: true,
-                trim: true,
-            },
-
-            images: {
-                type: [String],
-                required: true,
-                default: [],
-            },
-
-            // =====================================================
-            // PRODUCT TYPE
-            // =====================================================
-
-            category: {
-                type: String,
-                required: true,
-                enum: [
-                    "Main Line",
-                    "Premium",
-                    "Silver Series",
-                    "Fantasy",
-                ],
-            },
-
-            productType: {
-                type: String,
-                required: true,
-                enum: [
-                    "Single Car",
-                    "Car Pack",
-                ],
-            },
-
-            carCount: {
-                type: Number,
-                required: true,
-                min: 1,
-                default: 1,
-            },
-
-            // =====================================================
-            // PRICING
-            // =====================================================
-
-            price: {
-                type: Number,
-                required: true,
-                min: 0,
-            },
-
-            labelledPrice: {
-                type: Number,
-                required: true,
-                min: 0,
-            },
-
-            // =====================================================
-            // INVENTORY
-            // =====================================================
-
-            quantity: {
-                type: Number,
-                required: true,
-                min: 0,
-                default: 0,
-            },
-
-            // =====================================================
-            // MODEL INFORMATION
-            // =====================================================
-
-            year: {
-                type: Number,
-                required: true,
-            },
-
-            series: {
-                type: String,
-                required: true,
-                trim: true,
-            },
-
-            casting: {
-                type: String,
-                required: true,
-                trim: true,
-            },
-
-            manufacturer: {
-                type: String,
-                trim: true,
-                default: "",
-            },
-
-            model: {
-                type: String,
-                trim: true,
-                default: "",
-            },
-
-            vehicleType: {
-                type: String,
-                enum: [
-                    "Sports Car",
-                    "Supercar",
-                    "Hypercar",
-                    "Muscle Car",
-                    "Classic Car",
-                    "JDM",
-                    "Truck",
-                    "SUV",
-                    "Race Car",
-                    "Motorcycle",
-                    "Fantasy",
-                    "Other",
-                ],
-                default: "Other",
-            },
-
-            color: {
-                type: String,
-                trim: true,
-                default: "",
-            },
-
-            scale: {
-                type: String,
-                trim: true,
-                default: "1:64",
-            },
-
-            seriesNumber: {
-                type: String,
-                trim: true,
-                default: "",
-            },
-
-            // =====================================================
-            // CONDITION
-            // =====================================================
-
-            condition: {
-                type: String,
-                enum: [
-                    "New",
-                    "Mint",
-                    "Near Mint",
-                    "Used",
-                ],
-                default: "New",
-            },
-
-            packaging: {
-                type: String,
-                enum: [
-                    "Carded",
-                    "Blister Pack",
-                    "Boxed",
-                    "Multi Pack",
-                ],
-                default: "Carded",
-            },
-
-            // =====================================================
-            // STATUS
-            // =====================================================
-
-            inStock: {
-                type: Boolean,
-                default: true,
-            },
-
-            featured: {
-                type: Boolean,
-                default: false,
-            },
-
-            status: {
-                type: String,
-                enum: [
-                    "Active",
-                    "Inactive",
-                    "Out of Stock",
-                    "Coming Soon",
-                ],
-                default: "Active",
-            },
+        productID: {
+            type: String,
+            required: true,
+            unique: true,
+            trim: true,
         },
-        {
-            timestamps: true,
-        }
-    );
 
-// =============================================================
-// SAVE STOCK SYNCHRONIZATION
-// =============================================================
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+        },
 
-productSchema.pre(
-    "save",
-    function (next) {
-        if (this.quantity <= 0) {
-            this.inStock = false;
-            this.status =
-                "Out of Stock";
-        } else {
-            this.inStock = true;
+        altNames: {
+            type: [String],
+            default: [],
+        },
 
-            if (
-                this.status ===
-                "Out of Stock"
-            ) {
-                this.status =
-                    "Active";
-            }
-        }
+        description: {
+            type: String,
+            required: true,
+            trim: true,
+        },
 
-        next();
+        images: {
+            type: [String],
+            default: [],
+        },
+
+        // =====================================================
+        // CATEGORY
+        // =====================================================
+
+        category: {
+            type: String,
+            enum: [
+                "Main Line",
+                "Premium",
+                "Silver Series",
+                "Fantasy",
+            ],
+            required: true,
+            default: "Main Line",
+        },
+
+        productType: {
+            type: String,
+            enum: [
+                "Single Car",
+                "Car Pack",
+            ],
+            required: true,
+            default: "Single Car",
+        },
+
+        carCount: {
+            type: Number,
+            min: 1,
+            default: 1,
+        },
+
+        // =====================================================
+        // PRICING
+        // =====================================================
+
+        price: {
+            type: Number,
+            required: true,
+            min: 0,
+        },
+
+        labelledPrice: {
+            type: Number,
+            required: true,
+            min: 0,
+        },
+
+        // =====================================================
+        // INVENTORY
+        // =====================================================
+
+        quantity: {
+            type: Number,
+            required: true,
+            min: 0,
+            default: 0,
+        },
+
+        inStock: {
+            type: Boolean,
+            default: true,
+        },
+
+        // =====================================================
+        // PRODUCT DETAILS
+        // =====================================================
+
+        year: {
+            type: Number,
+            default: new Date().getFullYear(),
+        },
+
+        series: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+
+        casting: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+
+        manufacturer: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+
+        model: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+
+        vehicleType: {
+            type: String,
+            default: "Other",
+            trim: true,
+        },
+
+        color: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+
+        scale: {
+            type: String,
+            default: "1:64",
+            trim: true,
+        },
+
+        seriesNumber: {
+            type: String,
+            default: "",
+            trim: true,
+        },
+
+        condition: {
+            type: String,
+            default: "New",
+            trim: true,
+        },
+
+        packaging: {
+            type: String,
+            default: "Carded",
+            trim: true,
+        },
+
+        // =====================================================
+        // STATUS
+        // =====================================================
+
+        featured: {
+            type: Boolean,
+            default: false,
+        },
+
+        status: {
+            type: String,
+            enum: [
+                "Active",
+                "Out of Stock",
+                "Inactive",
+            ],
+            default: "Active",
+        },
+    },
+    {
+        timestamps: true,
     }
 );
 
 // =============================================================
-// UPDATE STOCK SYNCHRONIZATION
+// SAVE MIDDLEWARE
+// =============================================================
+//
+// Mongoose 9 compatible.
+// IMPORTANT:
+// Do NOT use function(next) and next() here.
 // =============================================================
 
-productSchema.pre(
-    "findOneAndUpdate",
-    function (next) {
-        const update =
-            this.getUpdate();
+productSchema.pre("save", function () {
+    const quantity = Number(this.quantity) || 0;
 
-        if (!update) {
-            return next();
+    if (quantity <= 0) {
+        this.quantity = 0;
+        this.inStock = false;
+        this.status = "Out of Stock";
+    } else {
+        this.inStock = true;
+
+        if (this.status === "Out of Stock") {
+            this.status = "Active";
         }
-
-        const updateData =
-            update.$set || update;
-
-        if (
-            updateData.quantity !==
-            undefined
-        ) {
-            const quantity =
-                Number(
-                    updateData.quantity
-                );
-
-            if (
-                Number.isFinite(
-                    quantity
-                )
-            ) {
-                updateData.inStock =
-                    quantity > 0;
-
-                if (quantity <= 0) {
-                    updateData.status =
-                        "Out of Stock";
-                } else if (
-                    updateData.status ===
-                    "Out of Stock"
-                ) {
-                    updateData.status =
-                        "Active";
-                }
-            }
-        }
-
-        if (update.$set) {
-            update.$set =
-                updateData;
-        } else {
-            update.$set =
-                updateData;
-
-            for (const key of Object.keys(
-                update
-            )) {
-                if (
-                    key !== "$set" &&
-                    !key.startsWith("$")
-                ) {
-                    delete update[key];
-                }
-            }
-        }
-
-        this.setUpdate(update);
-
-        next();
     }
-);
+});
+
+// =============================================================
+// FIND ONE AND UPDATE MIDDLEWARE
+// =============================================================
+//
+// Mongoose 9 compatible.
+// No next().
+// =============================================================
+
+productSchema.pre("findOneAndUpdate", function () {
+    const update = this.getUpdate();
+
+    if (!update) {
+        return;
+    }
+
+    let quantity;
+
+    // ---------------------------------------------------------
+    // Direct quantity update
+    // ---------------------------------------------------------
+
+    if (
+        Object.prototype.hasOwnProperty.call(
+            update,
+            "quantity"
+        )
+    ) {
+        quantity = Number(update.quantity);
+    }
+
+    // ---------------------------------------------------------
+    // $set quantity update
+    // ---------------------------------------------------------
+
+    if (
+        update.$set &&
+        Object.prototype.hasOwnProperty.call(
+            update.$set,
+            "quantity"
+        )
+    ) {
+        quantity = Number(update.$set.quantity);
+    }
+
+    // ---------------------------------------------------------
+    // $inc quantity update
+    //
+    // IMPORTANT:
+    // We cannot reliably calculate final quantity here without
+    // reading the document, so don't automatically modify the
+    // stock status for $inc operations.
+    //
+    // The order controller handles the final stock status.
+    // ---------------------------------------------------------
+
+    if (
+        update.$inc &&
+        Object.prototype.hasOwnProperty.call(
+            update.$inc,
+            "quantity"
+        )
+    ) {
+        return;
+    }
+
+    // ---------------------------------------------------------
+    // If quantity was explicitly updated
+    // ---------------------------------------------------------
+
+    if (quantity !== undefined) {
+        if (quantity <= 0) {
+            if (!update.$set) {
+                update.$set = {};
+            }
+
+            update.$set.quantity = 0;
+            update.$set.inStock = false;
+            update.$set.status = "Out of Stock";
+        } else {
+            if (!update.$set) {
+                update.$set = {};
+            }
+
+            update.$set.inStock = true;
+
+            // Only reactivate products that were previously
+            // marked as Out of Stock.
+            if (
+                update.$set.status === undefined
+            ) {
+                update.$set.status = "Active";
+            }
+        }
+    }
+});
+
+// =============================================================
+// INDEX
+// =============================================================
+
+productSchema.index({
+    category: 1,
+});
+
+productSchema.index({
+    status: 1,
+});
+
+productSchema.index({
+    featured: 1,
+});
 
 // =============================================================
 // MODEL
 // =============================================================
 
-const Product =
-    mongoose.model(
-        "Product",
-        productSchema
-    );
+const Product = mongoose.model(
+    "Product",
+    productSchema
+);
 
 export default Product;
-

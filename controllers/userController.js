@@ -1,95 +1,228 @@
-import User from "../models/user.js"
-import bcrypt from "bcrypt"
-import jwt from "jsonwebtoken"
+import User from "../models/user.js";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 
-export function createUser(req, res) {
+/* =========================================================
+   CREATE USER
+========================================================= */
 
-    const hashedPassword = bcrypt.hashSync(req.body.password, 10)
+export async function createUser(req, res) {
+    try {
+        const {
+            email,
+            firstName,
+            lastName,
+            password,
+            role,
+        } = req.body;
 
-    const user = new User(
-        {
-            email: req.body.email,
-            firstName: req.body.firstName,
-            lastName: req.body.lastName,
-            password: hashedPassword,
-            role: req.body.role
+        if (!email || !firstName || !lastName || !password) {
+            return res.status(400).json({
+                message:
+                    "Email, first name, last name and password are required.",
+            });
         }
-    )
 
-    user.save().then(
-        () => {
-            res.json("User saved successfully");
+        const normalizedEmail =
+            email.trim().toLowerCase();
+
+        const existingUser =
+            await User.findOne({
+                email: normalizedEmail,
+            });
+
+        if (existingUser) {
+            return res.status(409).json({
+                message:
+                    "An account with this email already exists.",
+            });
         }
-    ).catch(
-        (err) => {
-            res.json("Error saving user: ", err);
-        }
-    )
+
+        const hashedPassword =
+            await bcrypt.hash(password, 10);
+
+        const user = new User({
+            email: normalizedEmail,
+            firstName:
+                firstName.trim(),
+            lastName:
+                lastName.trim(),
+            password:
+                hashedPassword,
+            role:
+                role || "user",
+        });
+
+        await user.save();
+
+        return res.status(201).json({
+            message:
+                "User saved successfully",
+        });
+
+    } catch (error) {
+        console.error(
+            "Create user error:",
+            error
+        );
+
+        return res.status(500).json({
+            message:
+                "Error saving user.",
+            error:
+                error.message,
+        });
+    }
 }
 
-export function loginUser(req, res) {
 
-    User.findOne(
-        {
-            email: req.body.email
+/* =========================================================
+   LOGIN USER
+========================================================= */
+
+export async function loginUser(req, res) {
+    try {
+        const {
+            email,
+            password,
+        } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({
+                message:
+                    "Email and password are required.",
+            });
         }
-    ).then(
-        (user) => {
 
-            if (user == null) {
-                res.status(404).json({
-                    message: "User not found",
-                })
+        const normalizedEmail =
+            email.trim().toLowerCase();
 
-            } else {
+        const user =
+            await User.findOne({
+                email: normalizedEmail,
+            });
 
-                const isPasswordMatching = bcrypt.compareSync(req.body.password, user.password)
-                if (isPasswordMatching) {
+        if (!user) {
+            return res.status(404).json({
+                message:
+                    "User not found.",
+            });
+        }
 
-                    const toekn = jwt.sign(
-                        {
-                            email: user.email,
-                            firstName: user.firstName,
-                            lastName: user.lastName,
-                            role: user.role,
-                            isEmailVerified: user.isEmailVerified,
-                        },
-                        process.env.JWT_SECRET,
-                    )
+        const isPasswordMatching =
+            await bcrypt.compare(
+                password,
+                user.password
+            );
 
-                    res.json({
-                        message: "Login successful",
-                        token: toekn,
-                        user: {
-                            email: user.email,
-                            firstName: user.firstName,
-                            lastName: user.lastName,
-                            role: user.role,
-                            isEmailVerified: user.isEmailVerified,
-                        }
-                    })
+        if (!isPasswordMatching) {
+            return res.status(401).json({
+                message:
+                    "Invalid password.",
+            });
+        }
 
-                } else {
-                    res.status(401).json({
-                        message: "Invalid password"
-                    })
 
+        /* =====================================================
+           JWT
+        ===================================================== */
+
+        const token =
+            jwt.sign(
+                {
+                    userID:
+                        user._id.toString(),
+
+                    email:
+                        user.email,
+
+                    firstName:
+                        user.firstName,
+
+                    lastName:
+                        user.lastName,
+
+                    role:
+                        user.role,
+
+                    isEmailVerified:
+                        user.isEmailVerified,
+                },
+                process.env.JWT_SECRET,
+                {
+                    expiresIn:
+                        "7d",
                 }
-            }
-        }
-    )
+            );
+
+
+        /* =====================================================
+           RESPONSE
+        ===================================================== */
+
+        return res.status(200).json({
+            message:
+                "Login successful",
+
+            token,
+
+            user: {
+                id:
+                    user._id.toString(),
+
+                _id:
+                    user._id.toString(),
+
+                userID:
+                    user._id.toString(),
+
+                email:
+                    user.email,
+
+                firstName:
+                    user.firstName,
+
+                lastName:
+                    user.lastName,
+
+                role:
+                    user.role,
+
+                isEmailVerified:
+                    user.isEmailVerified,
+            },
+        });
+
+    } catch (error) {
+        console.error(
+            "Login error:",
+            error
+        );
+
+        return res.status(500).json({
+            message:
+                "Login failed.",
+            error:
+                error.message,
+        });
+    }
 }
 
-export function isAdmin(req){
 
-     if(req.user == null){
+/* =========================================================
+   ADMIN CHECK
+========================================================= */
+
+export function isAdmin(req) {
+    if (!req.user) {
         return false;
     }
 
-    if(req.user.role != "admin"){
+    if (req.user.role !== "admin") {
         return false;
     }
 
     return true;
 }
+
