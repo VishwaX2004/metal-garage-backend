@@ -5,27 +5,19 @@ import {
     createOrder,
     getMyOrders,
     getOrderByID,
+    deleteOrder,
 } from "../controllers/orderController.js";
 
-const orderRouter =
-    express.Router();
+const orderRouter = express.Router();
 
 // =============================================================
 // AUTHENTICATION MIDDLEWARE
 // =============================================================
 
-const requireAuth = (
-    req,
-    res,
-    next
-) => {
+const requireAuth = (req, res, next) => {
     try {
         const authorization =
             req.headers.authorization;
-
-        // -----------------------------------------------------
-        // CHECK AUTHORIZATION HEADER
-        // -----------------------------------------------------
 
         if (!authorization) {
             return res.status(401).json({
@@ -34,14 +26,8 @@ const requireAuth = (
             });
         }
 
-        // -----------------------------------------------------
-        // CHECK BEARER FORMAT
-        // -----------------------------------------------------
-
         if (
-            !authorization.startsWith(
-                "Bearer "
-            )
+            !authorization.startsWith("Bearer ")
         ) {
             return res.status(401).json({
                 message:
@@ -49,13 +35,8 @@ const requireAuth = (
             });
         }
 
-        // -----------------------------------------------------
-        // GET TOKEN
-        // -----------------------------------------------------
-
         const token =
-            authorization
-                .split(" ")[1];
+            authorization.split(" ")[1];
 
         if (!token) {
             return res.status(401).json({
@@ -63,10 +44,6 @@ const requireAuth = (
                     "Authentication token is missing.",
             });
         }
-
-        // -----------------------------------------------------
-        // JWT SECRET
-        // -----------------------------------------------------
 
         const secret =
             process.env.JWT_SECRET;
@@ -82,19 +59,8 @@ const requireAuth = (
             });
         }
 
-        // -----------------------------------------------------
-        // VERIFY TOKEN
-        // -----------------------------------------------------
-
         const decoded =
-            jwt.verify(
-                token,
-                secret
-            );
-
-        // -----------------------------------------------------
-        // SAVE USER
-        // -----------------------------------------------------
+            jwt.verify(token, secret);
 
         req.user = decoded;
 
@@ -135,6 +101,17 @@ orderRouter.get(
 );
 
 // =============================================================
+// DELETE ORDER
+// DELETE /api/orders/:orderID
+// =============================================================
+
+orderRouter.delete(
+    "/:orderID",
+    requireAuth,
+    deleteOrder
+);
+
+// =============================================================
 // GET SINGLE ORDER
 // GET /api/orders/:orderID
 // =============================================================
@@ -145,8 +122,5 @@ orderRouter.get(
     getOrderByID
 );
 
-// =============================================================
-// EXPORT
-// =============================================================
-
 export default orderRouter;
+

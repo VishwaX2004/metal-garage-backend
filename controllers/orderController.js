@@ -618,3 +618,78 @@ export async function getOrderByID(
         });
     }
 }
+
+
+// =============================================================
+// DELETE MY ORDER
+// DELETE /api/orders/:orderID
+// =============================================================
+
+export async function deleteOrder(req, res) {
+    try {
+        const { orderID } = req.params;
+
+        if (!orderID) {
+            return res.status(400).json({
+                message: "Order ID is required.",
+            });
+        }
+
+        // ---------------------------------------------------------
+        // Get logged-in user ID
+        // ---------------------------------------------------------
+
+        const userID =
+            req.user?.userID ||
+            req.user?.userId ||
+            req.user?.id ||
+            req.user?._id ||
+            null;
+
+        if (!userID) {
+            return res.status(401).json({
+                message: "User authentication is required.",
+            });
+        }
+
+        // ---------------------------------------------------------
+        // Find the order belonging to this logged-in user
+        // ---------------------------------------------------------
+
+        const order = await Order.findOne({
+            orderID: String(orderID),
+            userID: String(userID),
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                message:
+                    "Order not found or you do not have permission to delete it.",
+            });
+        }
+
+        // ---------------------------------------------------------
+        // Delete order
+        // ---------------------------------------------------------
+
+        await Order.deleteOne({
+            _id: order._id,
+        });
+
+        return res.status(200).json({
+            success: true,
+            message: "Order deleted successfully.",
+        });
+    } catch (error) {
+        console.error(
+            "Delete order error:",
+            error
+        );
+
+        return res.status(500).json({
+            message:
+                "Unable to delete the order.",
+        });
+    }
+}
+
