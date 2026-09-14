@@ -1,7 +1,6 @@
 import Product from "../models/product.js";
 import { isAdmin } from "./userController.js";
 
-
 // =========================================================
 // CREATE PRODUCT
 // =========================================================
@@ -9,7 +8,8 @@ import { isAdmin } from "./userController.js";
 export async function createProduct(req, res) {
     if (!isAdmin(req)) {
         return res.status(403).json({
-            message: "You are not authorized to create a product",
+            message:
+                "You are not authorized to create a product",
         });
     }
 
@@ -18,7 +18,8 @@ export async function createProduct(req, res) {
 
         if (
             !productData ||
-            typeof productData !== "object"
+            typeof productData !== "object" ||
+            Array.isArray(productData)
         ) {
             return res.status(400).json({
                 message: "Invalid product data",
@@ -34,12 +35,14 @@ export async function createProduct(req, res) {
             ];
         }
 
-        const product = new Product(productData);
+        const product =
+            new Product(productData);
 
         await product.save();
 
         return res.status(201).json({
-            message: "Product created successfully",
+            message:
+                "Product created successfully",
             product,
         });
     } catch (err) {
@@ -56,7 +59,10 @@ export async function createProduct(req, res) {
             });
         }
 
-        if (err.name === "ValidationError") {
+        if (
+            err.name ===
+            "ValidationError"
+        ) {
             return res.status(400).json({
                 message:
                     "Product validation error",
@@ -64,7 +70,10 @@ export async function createProduct(req, res) {
             });
         }
 
-        if (err.name === "CastError") {
+        if (
+            err.name ===
+            "CastError"
+        ) {
             return res.status(400).json({
                 message:
                     "Invalid product data",
@@ -80,7 +89,6 @@ export async function createProduct(req, res) {
     }
 }
 
-
 // =========================================================
 // GET ALL PRODUCTS
 // =========================================================
@@ -92,7 +100,9 @@ export async function getProducts(req, res) {
                 createdAt: -1,
             });
 
-        return res.status(200).json(products);
+        return res.status(200).json(
+            products
+        );
     } catch (err) {
         console.error(
             "Error fetching products:",
@@ -107,12 +117,14 @@ export async function getProducts(req, res) {
     }
 }
 
-
 // =========================================================
 // GET PRODUCT BY PRODUCT ID
 // =========================================================
 
-export async function getProductByID(req, res) {
+export async function getProductByID(
+    req,
+    res
+) {
     try {
         const { productID } =
             req.params;
@@ -136,6 +148,13 @@ export async function getProductByID(req, res) {
             });
         }
 
+        /*
+         * IMPORTANT:
+         * ProductOverview.jsx expects:
+         *
+         * response.data.product
+         */
+
         return res.status(200).json({
             product,
         });
@@ -153,12 +172,14 @@ export async function getProductByID(req, res) {
     }
 }
 
-
 // =========================================================
 // UPDATE PRODUCT
 // =========================================================
 
-export async function updateProduct(req, res) {
+export async function updateProduct(
+    req,
+    res
+) {
     if (!isAdmin(req)) {
         return res.status(403).json({
             message:
@@ -170,8 +191,6 @@ export async function updateProduct(req, res) {
         const { productID } =
             req.params;
 
-        const updateData = req.body;
-
         if (!productID) {
             return res.status(400).json({
                 message:
@@ -179,9 +198,12 @@ export async function updateProduct(req, res) {
             });
         }
 
+        const updateData = req.body;
+
         if (
             !updateData ||
-            typeof updateData !== "object"
+            typeof updateData !== "object" ||
+            Array.isArray(updateData)
         ) {
             return res.status(400).json({
                 message:
@@ -190,20 +212,75 @@ export async function updateProduct(req, res) {
         }
 
         if (
-            updateData.images !== undefined &&
-            !Array.isArray(updateData.images)
+            updateData.images !==
+                undefined &&
+            !Array.isArray(
+                updateData.images
+            )
         ) {
             updateData.images = [
                 updateData.images,
             ];
         }
 
+        /*
+         * Keep stock information synchronized.
+         */
+
+        if (
+            updateData.quantity !==
+            undefined
+        ) {
+            const quantity = Number(
+                updateData.quantity
+            );
+
+            if (
+                !Number.isFinite(
+                    quantity
+                ) ||
+                quantity < 0
+            ) {
+                return res.status(400).json({
+                    message:
+                        "Quantity must be a valid number greater than or equal to 0.",
+                });
+            }
+
+            updateData.quantity =
+                quantity;
+
+            if (quantity <= 0) {
+                updateData.inStock =
+                    false;
+
+                updateData.status =
+                    "Out of Stock";
+            } else {
+                updateData.inStock =
+                    true;
+
+                if (
+                    updateData.status ===
+                    "Out of Stock"
+                ) {
+                    updateData.status =
+                        "Active";
+                }
+            }
+        }
+
         const product =
             await Product.findOneAndUpdate(
-                { productID },
-                updateData,
                 {
-                    returnDocument: "after",
+                    productID,
+                },
+                {
+                    $set: updateData,
+                },
+                {
+                    returnDocument:
+                        "after",
                     runValidators: true,
                 }
             );
@@ -234,7 +311,10 @@ export async function updateProduct(req, res) {
             });
         }
 
-        if (err.name === "ValidationError") {
+        if (
+            err.name ===
+            "ValidationError"
+        ) {
             return res.status(400).json({
                 message:
                     "Product validation failed.",
@@ -242,7 +322,10 @@ export async function updateProduct(req, res) {
             });
         }
 
-        if (err.name === "CastError") {
+        if (
+            err.name ===
+            "CastError"
+        ) {
             return res.status(400).json({
                 message:
                     "Invalid product data.",
@@ -258,12 +341,14 @@ export async function updateProduct(req, res) {
     }
 }
 
-
 // =========================================================
 // DELETE PRODUCT
 // =========================================================
 
-export async function deleteProduct(req, res) {
+export async function deleteProduct(
+    req,
+    res
+) {
     if (!isAdmin(req)) {
         return res.status(403).json({
             message:
@@ -287,7 +372,9 @@ export async function deleteProduct(req, res) {
                 productID,
             });
 
-        if (result.deletedCount === 0) {
+        if (
+            result.deletedCount === 0
+        ) {
             return res.status(404).json({
                 message:
                     "Product not found",

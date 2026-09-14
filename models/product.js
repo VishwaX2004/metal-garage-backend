@@ -1,212 +1,334 @@
 import mongoose from "mongoose";
 
-const productSchema = new mongoose.Schema(
-    {
-        productID: {
-            type: String,
-            required: true,
-            unique: true,
-            trim: true,
-        },
+const productSchema =
+    new mongoose.Schema(
+        {
+            // =====================================================
+            // BASIC INFORMATION
+            // =====================================================
 
-        name: {
-            type: String,
-            required: true,
-            trim: true,
-        },
+            productID: {
+                type: String,
+                required: true,
+                unique: true,
+                trim: true,
+            },
 
-        altNames: {
-            type: [String],
-            default: [],
-        },
+            name: {
+                type: String,
+                required: true,
+                trim: true,
+            },
 
-        description: {
-            type: String,
-            required: true,
-        },
+            altNames: {
+                type: [String],
+                default: [],
+            },
 
-        images: {
-            type: [String],
-            required: true,
-            default: [],
-        },
+            description: {
+                type: String,
+                required: true,
+                trim: true,
+            },
 
-        category: {
-            type: String,
-            required: true,
-            enum: [
-                "Main Line",
-                "Premium",
-                "Silver Series",
-                "Fantasy",
-            ],
-        },
+            images: {
+                type: [String],
+                required: true,
+                default: [],
+            },
 
-        productType: {
-            type: String,
-            required: true,
-            enum: [
-                "Single Car",
-                "Car Pack",
-            ],
-        },
+            // =====================================================
+            // PRODUCT TYPE
+            // =====================================================
 
-        carCount: {
-            type: Number,
-            required: true,
-            min: 1,
-            default: 1,
-        },
+            category: {
+                type: String,
+                required: true,
+                enum: [
+                    "Main Line",
+                    "Premium",
+                    "Silver Series",
+                    "Fantasy",
+                ],
+            },
 
-        price: {
-            type: Number,
-            required: true,
-            min: 0,
-        },
+            productType: {
+                type: String,
+                required: true,
+                enum: [
+                    "Single Car",
+                    "Car Pack",
+                ],
+            },
 
-        labelledPrice: {
-            type: Number,
-            required: true,
-            min: 0,
-        },
+            carCount: {
+                type: Number,
+                required: true,
+                min: 1,
+                default: 1,
+            },
 
-        quantity: {
-            type: Number,
-            required: true,
-            min: 0,
-            default: 0,
-        },
+            // =====================================================
+            // PRICING
+            // =====================================================
 
-        year: {
-            type: Number,
-            required: true,
-        },
+            price: {
+                type: Number,
+                required: true,
+                min: 0,
+            },
 
-        series: {
-            type: String,
-            required: true,
-            trim: true,
-        },
+            labelledPrice: {
+                type: Number,
+                required: true,
+                min: 0,
+            },
 
-        casting: {
-            type: String,
-            required: true,
-            trim: true,
-        },
+            // =====================================================
+            // INVENTORY
+            // =====================================================
 
-        manufacturer: {
-            type: String,
-            trim: true,
-        },
+            quantity: {
+                type: Number,
+                required: true,
+                min: 0,
+                default: 0,
+            },
 
-        model: {
-            type: String,
-            trim: true,
-        },
+            // =====================================================
+            // MODEL INFORMATION
+            // =====================================================
 
-        vehicleType: {
-            type: String,
-            enum: [
-                "Sports Car",
-                "Supercar",
-                "Hypercar",
-                "Muscle Car",
-                "Classic Car",
-                "JDM",
-                "Truck",
-                "SUV",
-                "Race Car",
-                "Motorcycle",
-                "Fantasy",
-                "Other",
-            ],
-            default: "Other",
-        },
+            year: {
+                type: Number,
+                required: true,
+            },
 
-        color: {
-            type: String,
-            trim: true,
-        },
+            series: {
+                type: String,
+                required: true,
+                trim: true,
+            },
 
-        scale: {
-            type: String,
-            default: "1:64",
-        },
+            casting: {
+                type: String,
+                required: true,
+                trim: true,
+            },
 
-        seriesNumber: {
-            type: String,
-            trim: true,
-        },
+            manufacturer: {
+                type: String,
+                trim: true,
+                default: "",
+            },
 
-        condition: {
-            type: String,
-            enum: [
-                "New",
-                "Mint",
-                "Near Mint",
-                "Used",
-            ],
-            default: "New",
-        },
+            model: {
+                type: String,
+                trim: true,
+                default: "",
+            },
 
-        packaging: {
-            type: String,
-            enum: [
-                "Carded",
-                "Blister Pack",
-                "Boxed",
-                "Multi Pack",
-            ],
-            default: "Carded",
-        },
+            vehicleType: {
+                type: String,
+                enum: [
+                    "Sports Car",
+                    "Supercar",
+                    "Hypercar",
+                    "Muscle Car",
+                    "Classic Car",
+                    "JDM",
+                    "Truck",
+                    "SUV",
+                    "Race Car",
+                    "Motorcycle",
+                    "Fantasy",
+                    "Other",
+                ],
+                default: "Other",
+            },
 
-        inStock: {
-            type: Boolean,
-            default: true,
-        },
+            color: {
+                type: String,
+                trim: true,
+                default: "",
+            },
 
-        featured: {
-            type: Boolean,
-            default: false,
-        },
+            scale: {
+                type: String,
+                trim: true,
+                default: "1:64",
+            },
 
-        status: {
-            type: String,
-            enum: [
-                "Active",
-                "Inactive",
-                "Out of Stock",
-                "Coming Soon",
-            ],
-            default: "Active",
+            seriesNumber: {
+                type: String,
+                trim: true,
+                default: "",
+            },
+
+            // =====================================================
+            // CONDITION
+            // =====================================================
+
+            condition: {
+                type: String,
+                enum: [
+                    "New",
+                    "Mint",
+                    "Near Mint",
+                    "Used",
+                ],
+                default: "New",
+            },
+
+            packaging: {
+                type: String,
+                enum: [
+                    "Carded",
+                    "Blister Pack",
+                    "Boxed",
+                    "Multi Pack",
+                ],
+                default: "Carded",
+            },
+
+            // =====================================================
+            // STATUS
+            // =====================================================
+
+            inStock: {
+                type: Boolean,
+                default: true,
+            },
+
+            featured: {
+                type: Boolean,
+                default: false,
+            },
+
+            status: {
+                type: String,
+                enum: [
+                    "Active",
+                    "Inactive",
+                    "Out of Stock",
+                    "Coming Soon",
+                ],
+                default: "Active",
+            },
         },
-    },
-    {
-        timestamps: true,
+        {
+            timestamps: true,
+        }
+    );
+
+// =============================================================
+// SAVE STOCK SYNCHRONIZATION
+// =============================================================
+
+productSchema.pre(
+    "save",
+    function (next) {
+        if (this.quantity <= 0) {
+            this.inStock = false;
+            this.status =
+                "Out of Stock";
+        } else {
+            this.inStock = true;
+
+            if (
+                this.status ===
+                "Out of Stock"
+            ) {
+                this.status =
+                    "Active";
+            }
+        }
+
+        next();
     }
 );
 
+// =============================================================
+// UPDATE STOCK SYNCHRONIZATION
+// =============================================================
 
-/* =========================================================
-   UPDATE STOCK STATUS BEFORE SAVING
-========================================================= */
+productSchema.pre(
+    "findOneAndUpdate",
+    function (next) {
+        const update =
+            this.getUpdate();
 
-productSchema.pre("save", function () {
-
-    if (this.quantity <= 0) {
-        this.inStock = false;
-        this.status = "Out of Stock";
-    } else {
-        this.inStock = true;
-
-        if (this.status === "Out of Stock") {
-            this.status = "Active";
+        if (!update) {
+            return next();
         }
+
+        const updateData =
+            update.$set || update;
+
+        if (
+            updateData.quantity !==
+            undefined
+        ) {
+            const quantity =
+                Number(
+                    updateData.quantity
+                );
+
+            if (
+                Number.isFinite(
+                    quantity
+                )
+            ) {
+                updateData.inStock =
+                    quantity > 0;
+
+                if (quantity <= 0) {
+                    updateData.status =
+                        "Out of Stock";
+                } else if (
+                    updateData.status ===
+                    "Out of Stock"
+                ) {
+                    updateData.status =
+                        "Active";
+                }
+            }
+        }
+
+        if (update.$set) {
+            update.$set =
+                updateData;
+        } else {
+            update.$set =
+                updateData;
+
+            for (const key of Object.keys(
+                update
+            )) {
+                if (
+                    key !== "$set" &&
+                    !key.startsWith("$")
+                ) {
+                    delete update[key];
+                }
+            }
+        }
+
+        this.setUpdate(update);
+
+        next();
     }
-});
+);
 
+// =============================================================
+// MODEL
+// =============================================================
 
-const Product = mongoose.model("Product", productSchema);
+const Product =
+    mongoose.model(
+        "Product",
+        productSchema
+    );
 
 export default Product;
 

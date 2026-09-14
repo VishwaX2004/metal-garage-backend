@@ -8,16 +8,58 @@ import {
     updateProduct,
 } from "../controllers/productController.js";
 
-const productRouter = express.Router();
+const productRouter =
+    express.Router();
 
-productRouter.get("/", getProducts);
+// =========================================================
+// GET ALL PRODUCTS
+// GET /api/products
+// =========================================================
 
-productRouter.post("/", createProduct);
+productRouter.get(
+    "/",
+    getProducts
+);
 
-productRouter.get("/:productID", getProductByID);
+// =========================================================
+// CREATE PRODUCT
+// POST /api/products
+// =========================================================
 
-productRouter.put("/:productID", updateProduct);
+productRouter.post(
+    "/",
+    createProduct
+);
 
-productRouter.delete("/:productID", deleteProduct);
+// =========================================================
+// GET PRODUCT BY PRODUCT ID
+// GET /api/products/:productID
+// =========================================================
+
+productRouter.get(
+    "/:productID",
+    getProductByID
+);
+
+// =========================================================
+// UPDATE PRODUCT
+// PUT /api/products/:productID
+// =========================================================
+
+productRouter.put(
+    "/:productID",
+    updateProduct
+);
+
+// =========================================================
+// DELETE PRODUCT
+// DELETE /api/products/:productID
+// =========================================================
+
+productRouter.delete(
+    "/:productID",
+    deleteProduct
+);
 
 export default productRouter;
+
