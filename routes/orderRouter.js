@@ -6,28 +6,30 @@ import {
     getMyOrders,
     getOrderByID,
     deleteOrder,
+    getAllOrdersAdmin,
+    updateOrderStatusAdmin,
 } from "../controllers/orderController.js";
 
 const orderRouter = express.Router();
 
-// =============================================================
+// ============================================================
 // AUTHENTICATION MIDDLEWARE
-// =============================================================
+// ============================================================
 
-const requireAuth = (req, res, next) => {
+const authMiddleware = (req, res, next) => {
     try {
-        const authorization =
+        const authHeader =
             req.headers.authorization;
 
-        if (!authorization) {
+        if (!authHeader) {
             return res.status(401).json({
                 message:
-                    "Authentication required.",
+                    "Authentication required. Please login again.",
             });
         }
 
         if (
-            !authorization.startsWith("Bearer ")
+            !authHeader.startsWith("Bearer ")
         ) {
             return res.status(401).json({
                 message:
@@ -36,7 +38,7 @@ const requireAuth = (req, res, next) => {
         }
 
         const token =
-            authorization.split(" ")[1];
+            authHeader.substring(7).trim();
 
         if (!token) {
             return res.status(401).json({
@@ -45,82 +47,115 @@ const requireAuth = (req, res, next) => {
             });
         }
 
-        const secret =
-            process.env.JWT_SECRET;
-
-        if (!secret) {
+        if (!process.env.JWT_SECRET) {
             console.error(
-                "JWT_SECRET is not configured."
+                "JWT_SECRET is missing from .env"
             );
 
             return res.status(500).json({
                 message:
-                    "Server authentication is not configured.",
+                    "Server authentication configuration is missing.",
             });
         }
 
         const decoded =
-            jwt.verify(token, secret);
+            jwt.verify(
+                token,
+                process.env.JWT_SECRET
+            );
 
         req.user = decoded;
 
-        next();
+        return next();
     } catch (error) {
         console.error(
-            "Authentication error:",
-            error.message
+            "Order auth middleware error:",
+            error
         );
+
+        if (
+            error.name ===
+            "TokenExpiredError"
+        ) {
+            return res.status(401).json({
+                message:
+                    "Your session has expired. Please login again.",
+            });
+        }
 
         return res.status(401).json({
             message:
-                "Invalid or expired authentication token.",
+                "Invalid authentication token. Please login again.",
         });
     }
 };
 
-// =============================================================
+// ============================================================
 // CREATE ORDER
 // POST /api/orders
-// =============================================================
+// ============================================================
 
 orderRouter.post(
     "/",
-    requireAuth,
+    authMiddleware,
     createOrder
 );
 
-// =============================================================
-// GET USER ORDERS
+// ============================================================
+// GET MY ORDERS
 // GET /api/orders/my-orders
-// =============================================================
+// ============================================================
 
 orderRouter.get(
     "/my-orders",
-    requireAuth,
+    authMiddleware,
     getMyOrders
 );
 
-// =============================================================
-// DELETE ORDER
-// DELETE /api/orders/:orderID
-// =============================================================
+// ============================================================
+// ADMIN - GET ALL ORDERS
+// GET /api/orders/admin/all
+// ============================================================
 
-orderRouter.delete(
-    "/:orderID",
-    requireAuth,
-    deleteOrder
+orderRouter.get(
+    "/admin/all",
+    authMiddleware,
+    getAllOrdersAdmin
 );
 
-// =============================================================
+// ============================================================
+// ADMIN - UPDATE ORDER STATUS
+// PUT /api/orders/admin/:orderID/status
+// ============================================================
+
+orderRouter.put(
+    "/admin/:orderID/status",
+    authMiddleware,
+    updateOrderStatusAdmin
+);
+
+// ============================================================
 // GET SINGLE ORDER
 // GET /api/orders/:orderID
-// =============================================================
+// ============================================================
 
 orderRouter.get(
     "/:orderID",
-    requireAuth,
+    authMiddleware,
     getOrderByID
 );
 
-export default orderRouter;
+// ============================================================
+// DELETE ORDER
+// DELETE /api/orders/:orderID
+// ============================================================
 
+orderRouter.delete(
+    "/:orderID",
+    authMiddleware,
+    deleteOrder
+);
+
+// ============================================================
+
+export default orderRouter;
