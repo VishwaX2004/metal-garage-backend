@@ -6,21 +6,30 @@ import {
     loginUser,
     getMyProfile,
     updateMyProfile,
+
+    // ADMIN
+    adminOnly,
+    getAllUsersAdmin,
+    getUserAdmin,
+    createUserAdmin,
+    updateUserAdmin,
+    deleteUserAdmin,
 } from "../controllers/userController.js";
 
 const userRouter = express.Router();
 
-// ============================================================
-// AUTHENTICATION MIDDLEWARE
-// ============================================================
+/* ============================================================
+   AUTHENTICATION MIDDLEWARE
+============================================================ */
 
 const authMiddleware = (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization;
+        const authHeader =
+            req.headers.authorization;
 
-        // ----------------------------------------------------
-        // CHECK AUTH HEADER
-        // ----------------------------------------------------
+        /* ----------------------------------------------------
+           CHECK AUTH HEADER
+        ---------------------------------------------------- */
 
         if (!authHeader) {
             return res.status(401).json({
@@ -29,22 +38,29 @@ const authMiddleware = (req, res, next) => {
             });
         }
 
-        // ----------------------------------------------------
-        // CHECK BEARER FORMAT
-        // ----------------------------------------------------
+        /* ----------------------------------------------------
+           CHECK BEARER FORMAT
+        ---------------------------------------------------- */
 
-        if (!authHeader.startsWith("Bearer ")) {
+        if (
+            !authHeader.startsWith(
+                "Bearer "
+            )
+        ) {
             return res.status(401).json({
                 message:
                     "Invalid authentication format.",
             });
         }
 
-        // ----------------------------------------------------
-        // GET TOKEN
-        // ----------------------------------------------------
+        /* ----------------------------------------------------
+           GET TOKEN
+        ---------------------------------------------------- */
 
-        const token = authHeader.substring(7).trim();
+        const token =
+            authHeader
+                .substring(7)
+                .trim();
 
         if (!token) {
             return res.status(401).json({
@@ -53,9 +69,9 @@ const authMiddleware = (req, res, next) => {
             });
         }
 
-        // ----------------------------------------------------
-        // CHECK JWT SECRET
-        // ----------------------------------------------------
+        /* ----------------------------------------------------
+           JWT SECRET
+        ---------------------------------------------------- */
 
         if (!process.env.JWT_SECRET) {
             console.error(
@@ -68,18 +84,15 @@ const authMiddleware = (req, res, next) => {
             });
         }
 
-        // ----------------------------------------------------
-        // VERIFY TOKEN
-        // ----------------------------------------------------
+        /* ----------------------------------------------------
+           VERIFY JWT
+        ---------------------------------------------------- */
 
-        const decoded = jwt.verify(
-            token,
-            process.env.JWT_SECRET
-        );
-
-        // ----------------------------------------------------
-        // ATTACH USER TO REQUEST
-        // ----------------------------------------------------
+        const decoded =
+            jwt.verify(
+                token,
+                process.env.JWT_SECRET
+            );
 
         req.user = decoded;
 
@@ -90,14 +103,20 @@ const authMiddleware = (req, res, next) => {
             error
         );
 
-        if (error.name === "TokenExpiredError") {
+        if (
+            error.name ===
+            "TokenExpiredError"
+        ) {
             return res.status(401).json({
                 message:
                     "Your session has expired. Please login again.",
             });
         }
 
-        if (error.name === "JsonWebTokenError") {
+        if (
+            error.name ===
+            "JsonWebTokenError"
+        ) {
             return res.status(401).json({
                 message:
                     "Invalid authentication token. Please login again.",
@@ -111,9 +130,9 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-// ============================================================
-// PUBLIC ROUTES
-// ============================================================
+/* ============================================================
+   PUBLIC ROUTES
+============================================================ */
 
 // REGISTER
 // POST /api/users
@@ -131,9 +150,68 @@ userRouter.post(
     loginUser
 );
 
-// ============================================================
-// PROTECTED ROUTES
-// ============================================================
+/* ============================================================
+   ADMIN CRUD ROUTES
+
+   ALL ADMIN ROUTES REQUIRE:
+
+   1. Valid JWT
+   2. role === "admin"
+============================================================ */
+
+// GET ALL USERS
+// GET /api/users/admin
+
+userRouter.get(
+    "/admin",
+    authMiddleware,
+    adminOnly,
+    getAllUsersAdmin
+);
+
+// GET ONE USER
+// GET /api/users/admin/:id
+
+userRouter.get(
+    "/admin/:id",
+    authMiddleware,
+    adminOnly,
+    getUserAdmin
+);
+
+// CREATE USER
+// POST /api/users/admin
+
+userRouter.post(
+    "/admin",
+    authMiddleware,
+    adminOnly,
+    createUserAdmin
+);
+
+// UPDATE USER
+// PUT /api/users/admin/:id
+
+userRouter.put(
+    "/admin/:id",
+    authMiddleware,
+    adminOnly,
+    updateUserAdmin
+);
+
+// DELETE USER
+// DELETE /api/users/admin/:id
+
+userRouter.delete(
+    "/admin/:id",
+    authMiddleware,
+    adminOnly,
+    deleteUserAdmin
+);
+
+/* ============================================================
+   CURRENT USER ROUTES
+============================================================ */
 
 // GET CURRENT USER
 // GET /api/users/me
@@ -153,6 +231,6 @@ userRouter.put(
     updateMyProfile
 );
 
-// ============================================================
+/* ============================================================ */
 
 export default userRouter;

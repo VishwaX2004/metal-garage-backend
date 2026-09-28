@@ -11,7 +11,7 @@ const DEFAULT_PROFILE_IMAGE =
 
 // ============================================================
 // PUBLIC USER DATA
-// Never send password to frontend
+// NEVER SEND PASSWORD
 // ============================================================
 
 function getPublicUser(user) {
@@ -38,6 +38,10 @@ function getPublicUser(user) {
         profileImage:
             user.profileImage ||
             DEFAULT_PROFILE_IMAGE,
+
+        createdAt: user.createdAt,
+
+        updatedAt: user.updatedAt,
     };
 }
 
@@ -90,10 +94,6 @@ export async function createUser(req, res) {
             password,
         } = req.body;
 
-        // ----------------------------------------------------
-        // VALIDATION
-        // ----------------------------------------------------
-
         if (
             !email ||
             !firstName ||
@@ -135,10 +135,6 @@ export async function createUser(req, res) {
             });
         }
 
-        // ----------------------------------------------------
-        // CHECK EXISTING USER
-        // ----------------------------------------------------
-
         const existingUser =
             await User.findOne({
                 email: normalizedEmail,
@@ -151,19 +147,11 @@ export async function createUser(req, res) {
             });
         }
 
-        // ----------------------------------------------------
-        // HASH PASSWORD
-        // ----------------------------------------------------
-
         const hashedPassword =
             await bcrypt.hash(
                 String(password),
                 10
             );
-
-        // ----------------------------------------------------
-        // CREATE USER
-        // ----------------------------------------------------
 
         const user =
             await User.create({
@@ -184,10 +172,6 @@ export async function createUser(req, res) {
                 profileImage:
                     DEFAULT_PROFILE_IMAGE,
             });
-
-        // ----------------------------------------------------
-        // RESPONSE
-        // ----------------------------------------------------
 
         return res.status(201).json({
             message:
@@ -221,10 +205,6 @@ export async function loginUser(req, res) {
             password,
         } = req.body;
 
-        // ----------------------------------------------------
-        // VALIDATION
-        // ----------------------------------------------------
-
         if (!email || !password) {
             return res.status(400).json({
                 message:
@@ -237,10 +217,6 @@ export async function loginUser(req, res) {
                 .trim()
                 .toLowerCase();
 
-        // ----------------------------------------------------
-        // CHECK JWT SECRET
-        // ----------------------------------------------------
-
         if (!process.env.JWT_SECRET) {
             console.error(
                 "JWT_SECRET is missing from .env"
@@ -251,10 +227,6 @@ export async function loginUser(req, res) {
                     "Server authentication configuration is missing.",
             });
         }
-
-        // ----------------------------------------------------
-        // FIND USER
-        // ----------------------------------------------------
 
         const user =
             await User.findOne({
@@ -268,16 +240,7 @@ export async function loginUser(req, res) {
             });
         }
 
-        // ----------------------------------------------------
-        // CHECK PASSWORD
-        // ----------------------------------------------------
-
         if (!user.password) {
-            console.error(
-                "User account has no password:",
-                user._id
-            );
-
             return res.status(500).json({
                 message:
                     "This account has invalid password data.",
@@ -297,10 +260,6 @@ export async function loginUser(req, res) {
             });
         }
 
-        // ----------------------------------------------------
-        // CHECK BLOCKED ACCOUNT
-        // ----------------------------------------------------
-
         if (user.isBlock) {
             return res.status(403).json({
                 message:
@@ -308,16 +267,8 @@ export async function loginUser(req, res) {
             });
         }
 
-        // ----------------------------------------------------
-        // CREATE TOKEN
-        // ----------------------------------------------------
-
         const token =
             createUserToken(user);
-
-        // ----------------------------------------------------
-        // RESPONSE
-        // ----------------------------------------------------
 
         return res.status(200).json({
             message:
@@ -337,11 +288,6 @@ export async function loginUser(req, res) {
         return res.status(500).json({
             message:
                 "Something went wrong while logging in.",
-
-            error:
-                process.env.NODE_ENV === "development"
-                    ? error.message
-                    : undefined,
         });
     }
 }
@@ -353,10 +299,6 @@ export async function loginUser(req, res) {
 
 export async function getMyProfile(req, res) {
     try {
-        // ----------------------------------------------------
-        // CHECK JWT USER
-        // ----------------------------------------------------
-
         if (
             !req.user ||
             !req.user.userID
@@ -366,10 +308,6 @@ export async function getMyProfile(req, res) {
                     "Authentication required. Please login again.",
             });
         }
-
-        // ----------------------------------------------------
-        // FIND USER
-        // ----------------------------------------------------
 
         const user =
             await User.findById(
@@ -383,20 +321,12 @@ export async function getMyProfile(req, res) {
             });
         }
 
-        // ----------------------------------------------------
-        // CHECK BLOCKED ACCOUNT
-        // ----------------------------------------------------
-
         if (user.isBlock) {
             return res.status(403).json({
                 message:
                     "Your account has been blocked.",
             });
         }
-
-        // ----------------------------------------------------
-        // RESPONSE
-        // ----------------------------------------------------
 
         return res.status(200).json({
             message:
@@ -425,10 +355,6 @@ export async function getMyProfile(req, res) {
 
 export async function updateMyProfile(req, res) {
     try {
-        // ----------------------------------------------------
-        // CHECK AUTHENTICATION
-        // ----------------------------------------------------
-
         if (
             !req.user ||
             !req.user.userID
@@ -442,10 +368,6 @@ export async function updateMyProfile(req, res) {
         const userID =
             req.user.userID;
 
-        // ----------------------------------------------------
-        // GET DATABASE USER
-        // ----------------------------------------------------
-
         const user =
             await User.findById(
                 userID
@@ -457,10 +379,6 @@ export async function updateMyProfile(req, res) {
                     "User account could not be found.",
             });
         }
-
-        // ----------------------------------------------------
-        // CHECK BLOCKED ACCOUNT
-        // ----------------------------------------------------
 
         if (user.isBlock) {
             return res.status(403).json({
@@ -478,10 +396,6 @@ export async function updateMyProfile(req, res) {
             newPassword,
         } = req.body;
 
-        // ====================================================
-        // UPDATE FIRST NAME
-        // ====================================================
-
         if (firstName !== undefined) {
             const cleanFirstName =
                 String(firstName).trim();
@@ -497,10 +411,6 @@ export async function updateMyProfile(req, res) {
                 cleanFirstName;
         }
 
-        // ====================================================
-        // UPDATE LAST NAME
-        // ====================================================
-
         if (lastName !== undefined) {
             const cleanLastName =
                 String(lastName).trim();
@@ -515,10 +425,6 @@ export async function updateMyProfile(req, res) {
             user.lastName =
                 cleanLastName;
         }
-
-        // ====================================================
-        // UPDATE EMAIL
-        // ====================================================
 
         if (email !== undefined) {
             const normalizedEmail =
@@ -553,10 +459,6 @@ export async function updateMyProfile(req, res) {
                 normalizedEmail;
         }
 
-        // ====================================================
-        // UPDATE PROFILE IMAGE
-        // ====================================================
-
         if (profileImage !== undefined) {
             if (
                 profileImage === null ||
@@ -569,8 +471,12 @@ export async function updateMyProfile(req, res) {
                     String(profileImage).trim();
 
                 if (
-                    !imageURL.startsWith("http://") &&
-                    !imageURL.startsWith("https://")
+                    !imageURL.startsWith(
+                        "http://"
+                    ) &&
+                    !imageURL.startsWith(
+                        "https://"
+                    )
                 ) {
                     return res.status(400).json({
                         message:
@@ -582,10 +488,6 @@ export async function updateMyProfile(req, res) {
                     imageURL;
             }
         }
-
-        // ====================================================
-        // UPDATE PASSWORD
-        // ====================================================
 
         if (newPassword !== undefined) {
             const cleanNewPassword =
@@ -625,22 +527,10 @@ export async function updateMyProfile(req, res) {
                 );
         }
 
-        // ====================================================
-        // SAVE
-        // ====================================================
-
         await user.save();
-
-        // ====================================================
-        // CREATE NEW JWT
-        // ====================================================
 
         const token =
             createUserToken(user);
-
-        // ====================================================
-        // RESPONSE
-        // ====================================================
 
         return res.status(200).json({
             message:
@@ -673,4 +563,594 @@ export function isAdmin(req) {
         req.user &&
         req.user.role === "admin"
     );
+}
+
+// ============================================================
+// ADMIN AUTH MIDDLEWARE
+// ============================================================
+
+export function adminOnly(req, res, next) {
+    if (
+        !req.user ||
+        req.user.role !== "admin"
+    ) {
+        return res.status(403).json({
+            message:
+                "Admin access is required.",
+        });
+    }
+
+    return next();
+}
+
+// ============================================================
+// ADMIN - GET ALL USERS
+// GET /api/users/admin
+// ============================================================
+
+export async function getAllUsersAdmin(
+    req,
+    res
+) {
+    try {
+        const users =
+            await User.find({})
+                .select(
+                    "-password"
+                )
+                .sort({
+                    createdAt: -1,
+                });
+
+        return res.status(200).json({
+            message:
+                "Users loaded successfully.",
+
+            users:
+                users.map(
+                    getPublicUser
+                ),
+        });
+    } catch (error) {
+        console.error(
+            "getAllUsersAdmin error:",
+            error
+        );
+
+        return res.status(500).json({
+            message:
+                "Something went wrong while loading users.",
+        });
+    }
+}
+
+// ============================================================
+// ADMIN - GET ONE USER
+// GET /api/users/admin/:id
+// ============================================================
+
+export async function getUserAdmin(
+    req,
+    res
+) {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({
+                message:
+                    "User ID is required.",
+            });
+        }
+
+        const user =
+            await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({
+                message:
+                    "User could not be found.",
+            });
+        }
+
+        return res.status(200).json({
+            message:
+                "User loaded successfully.",
+
+            user:
+                getPublicUser(user),
+        });
+    } catch (error) {
+        console.error(
+            "getUserAdmin error:",
+            error
+        );
+
+        return res.status(500).json({
+            message:
+                "Something went wrong while loading the user.",
+        });
+    }
+}
+
+// ============================================================
+// ADMIN - CREATE USER
+// POST /api/users/admin
+// ============================================================
+
+export async function createUserAdmin(
+    req,
+    res
+) {
+    try {
+        const {
+            email,
+            firstName,
+            lastName,
+            password,
+            role,
+            isBlock,
+            isEmailVerified,
+            profileImage,
+        } = req.body;
+
+        if (
+            !email ||
+            !firstName ||
+            !lastName ||
+            !password
+        ) {
+            return res.status(400).json({
+                message:
+                    "First name, last name, email and password are required.",
+            });
+        }
+
+        const normalizedEmail =
+            String(email)
+                .trim()
+                .toLowerCase();
+
+        const cleanFirstName =
+            String(firstName).trim();
+
+        const cleanLastName =
+            String(lastName).trim();
+
+        const cleanPassword =
+            String(password);
+
+        if (
+            !normalizedEmail ||
+            !cleanFirstName ||
+            !cleanLastName
+        ) {
+            return res.status(400).json({
+                message:
+                    "Please provide valid user information.",
+            });
+        }
+
+        if (cleanPassword.length < 6) {
+            return res.status(400).json({
+                message:
+                    "Password must contain at least 6 characters.",
+            });
+        }
+
+        const existingUser =
+            await User.findOne({
+                email: normalizedEmail,
+            });
+
+        if (existingUser) {
+            return res.status(409).json({
+                message:
+                    "An account with this email already exists.",
+            });
+        }
+
+        const hashedPassword =
+            await bcrypt.hash(
+                cleanPassword,
+                10
+            );
+
+        const safeRole =
+            role === "admin"
+                ? "admin"
+                : "user";
+
+        const image =
+            profileImage &&
+            String(profileImage).trim()
+                ? String(
+                      profileImage
+                  ).trim()
+                : DEFAULT_PROFILE_IMAGE;
+
+        if (
+            !image.startsWith(
+                "http://"
+            ) &&
+            !image.startsWith(
+                "https://"
+            )
+        ) {
+            return res.status(400).json({
+                message:
+                    "Invalid profile image URL.",
+            });
+        }
+
+        const user =
+            await User.create({
+                email: normalizedEmail,
+
+                firstName:
+                    cleanFirstName,
+
+                lastName:
+                    cleanLastName,
+
+                password:
+                    hashedPassword,
+
+                role: safeRole,
+
+                isBlock:
+                    Boolean(isBlock),
+
+                isEmailVerified:
+                    Boolean(
+                        isEmailVerified
+                    ),
+
+                profileImage: image,
+            });
+
+        return res.status(201).json({
+            message:
+                "User created successfully.",
+
+            user:
+                getPublicUser(user),
+        });
+    } catch (error) {
+        console.error(
+            "createUserAdmin error:",
+            error
+        );
+
+        return res.status(500).json({
+            message:
+                "Something went wrong while creating the user.",
+        });
+    }
+}
+
+// ============================================================
+// ADMIN - UPDATE USER
+// PUT /api/users/admin/:id
+// ============================================================
+
+export async function updateUserAdmin(
+    req,
+    res
+) {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({
+                message:
+                    "User ID is required.",
+            });
+        }
+
+        const user =
+            await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({
+                message:
+                    "User could not be found.",
+            });
+        }
+
+        const {
+            firstName,
+            lastName,
+            email,
+            password,
+            role,
+            isBlock,
+            isEmailVerified,
+            profileImage,
+        } = req.body;
+
+        // ====================================================
+        // FIRST NAME
+        // ====================================================
+
+        if (firstName !== undefined) {
+            const value =
+                String(firstName).trim();
+
+            if (!value) {
+                return res.status(400).json({
+                    message:
+                        "First name cannot be empty.",
+                });
+            }
+
+            user.firstName = value;
+        }
+
+        // ====================================================
+        // LAST NAME
+        // ====================================================
+
+        if (lastName !== undefined) {
+            const value =
+                String(lastName).trim();
+
+            if (!value) {
+                return res.status(400).json({
+                    message:
+                        "Last name cannot be empty.",
+                });
+            }
+
+            user.lastName = value;
+        }
+
+        // ====================================================
+        // EMAIL
+        // ====================================================
+
+        if (email !== undefined) {
+            const normalizedEmail =
+                String(email)
+                    .trim()
+                    .toLowerCase();
+
+            if (!normalizedEmail) {
+                return res.status(400).json({
+                    message:
+                        "Email cannot be empty.",
+                });
+            }
+
+            const existingUser =
+                await User.findOne({
+                    email: normalizedEmail,
+
+                    _id: {
+                        $ne: user._id,
+                    },
+                });
+
+            if (existingUser) {
+                return res.status(409).json({
+                    message:
+                        "This email is already being used by another account.",
+                });
+            }
+
+            user.email =
+                normalizedEmail;
+        }
+
+        // ====================================================
+        // PASSWORD
+        // ====================================================
+
+        if (
+            password !== undefined &&
+            String(password).trim()
+        ) {
+            const cleanPassword =
+                String(password);
+
+            if (cleanPassword.length < 6) {
+                return res.status(400).json({
+                    message:
+                        "Password must contain at least 6 characters.",
+                });
+            }
+
+            user.password =
+                await bcrypt.hash(
+                    cleanPassword,
+                    10
+                );
+        }
+
+        // ====================================================
+        // ROLE
+        // ====================================================
+
+        if (role !== undefined) {
+            if (
+                role !== "user" &&
+                role !== "admin"
+            ) {
+                return res.status(400).json({
+                    message:
+                        "Invalid user role.",
+                });
+            }
+
+            // Prevent admin from accidentally
+            // removing their own admin role.
+            if (
+                user._id.toString() ===
+                    req.user.userID &&
+                role !== "admin"
+            ) {
+                return res.status(400).json({
+                    message:
+                        "You cannot remove your own admin role.",
+                });
+            }
+
+            user.role = role;
+        }
+
+        // ====================================================
+        // BLOCK STATUS
+        // ====================================================
+
+        if (
+            isBlock !== undefined
+        ) {
+            // Prevent admin from blocking themselves.
+            if (
+                user._id.toString() ===
+                    req.user.userID &&
+                Boolean(isBlock)
+            ) {
+                return res.status(400).json({
+                    message:
+                        "You cannot block your own account.",
+                });
+            }
+
+            user.isBlock =
+                Boolean(isBlock);
+        }
+
+        // ====================================================
+        // EMAIL VERIFIED
+        // ====================================================
+
+        if (
+            isEmailVerified !==
+            undefined
+        ) {
+            user.isEmailVerified =
+                Boolean(
+                    isEmailVerified
+                );
+        }
+
+        // ====================================================
+        // PROFILE IMAGE
+        // ====================================================
+
+        if (
+            profileImage !==
+            undefined
+        ) {
+            if (
+                profileImage === null ||
+                String(
+                    profileImage
+                ).trim() === ""
+            ) {
+                user.profileImage =
+                    DEFAULT_PROFILE_IMAGE;
+            } else {
+                const image =
+                    String(
+                        profileImage
+                    ).trim();
+
+                if (
+                    !image.startsWith(
+                        "http://"
+                    ) &&
+                    !image.startsWith(
+                        "https://"
+                    )
+                ) {
+                    return res.status(400).json({
+                        message:
+                            "Invalid profile image URL.",
+                    });
+                }
+
+                user.profileImage =
+                    image;
+            }
+        }
+
+        await user.save();
+
+        return res.status(200).json({
+            message:
+                "User updated successfully.",
+
+            user:
+                getPublicUser(user),
+        });
+    } catch (error) {
+        console.error(
+            "updateUserAdmin error:",
+            error
+        );
+
+        return res.status(500).json({
+            message:
+                "Something went wrong while updating the user.",
+        });
+    }
+}
+
+// ============================================================
+// ADMIN - DELETE USER
+// DELETE /api/users/admin/:id
+// ============================================================
+
+export async function deleteUserAdmin(
+    req,
+    res
+) {
+    try {
+        const { id } = req.params;
+
+        if (!id) {
+            return res.status(400).json({
+                message:
+                    "User ID is required.",
+            });
+        }
+
+        if (
+            id === req.user.userID
+        ) {
+            return res.status(400).json({
+                message:
+                    "You cannot delete your own admin account.",
+            });
+        }
+
+        const user =
+            await User.findById(id);
+
+        if (!user) {
+            return res.status(404).json({
+                message:
+                    "User could not be found.",
+            });
+        }
+
+        await User.findByIdAndDelete(id);
+
+        return res.status(200).json({
+            message:
+                "User deleted successfully.",
+        });
+    } catch (error) {
+        console.error(
+            "deleteUserAdmin error:",
+            error
+        );
+
+        return res.status(500).json({
+            message:
+                "Something went wrong while deleting the user.",
+        });
+    }
 }
