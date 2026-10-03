@@ -22,7 +22,7 @@ const userRouter = express.Router();
    AUTHENTICATION MIDDLEWARE
 ============================================================ */
 
-const authMiddleware = (req, res, next) => {
+export const authMiddleware = (req, res, next) => {
     try {
         const authHeader =
             req.headers.authorization;

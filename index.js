@@ -6,6 +6,7 @@ import cors from "cors";
 import userRouter from "./routes/userRouter.js";
 import productRouter from "./routes/productRouter.js";
 import orderRouter from "./routes/orderRouter.js";
+import payhereRouter from "./routes/payhereRoutes.js";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.use(
 );
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
 /* =============================================================
    MONGODB CONNECTION
@@ -68,6 +70,11 @@ app.use(
 app.use(
     "/api/orders",
     orderRouter
+);
+
+app.use(
+    "/api/payments/payhere",
+    payhereRouter
 );
 
 /* =============================================================

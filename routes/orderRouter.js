@@ -1,6 +1,10 @@
 import express from "express";
 
 import {
+    authMiddleware,
+} from "./userRouter.js";
+
+import {
     createOrder,
     getMyOrders,
     getOrderByID,
@@ -31,6 +35,7 @@ const router =
 
 router.post(
     "/",
+    authMiddleware,
     createOrder
 );
 
@@ -71,6 +76,7 @@ router.put(
 
 router.get(
     "/:orderID",
+    authMiddleware,
     getOrderByID
 );
 
