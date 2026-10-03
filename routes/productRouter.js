@@ -1,4 +1,8 @@
 import express from "express";
+import {
+    authMiddleware,
+} from "./userRouter.js";
+import { adminOnly } from "../controllers/userController.js";
 
 import {
     createProduct,
@@ -28,6 +32,8 @@ productRouter.get(
 
 productRouter.post(
     "/",
+    authMiddleware,
+    adminOnly,
     createProduct
 );
 
@@ -48,6 +54,8 @@ productRouter.get(
 
 productRouter.put(
     "/:productID",
+    authMiddleware,
+    adminOnly,
     updateProduct
 );
 
@@ -58,6 +66,8 @@ productRouter.put(
 
 productRouter.delete(
     "/:productID",
+    authMiddleware,
+    adminOnly,
     deleteProduct
 );
 

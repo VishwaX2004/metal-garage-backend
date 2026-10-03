@@ -3,6 +3,7 @@ import express from "express";
 import {
     authMiddleware,
 } from "./userRouter.js";
+import { adminOnly } from "../controllers/userController.js";
 
 import {
     createOrder,
@@ -46,6 +47,7 @@ router.post(
 
 router.get(
     "/my-orders",
+    authMiddleware,
     getMyOrders
 );
 
@@ -56,6 +58,8 @@ router.get(
 
 router.get(
     "/admin/all",
+    authMiddleware,
+    adminOnly,
     getAllOrdersAdmin
 );
 
@@ -66,6 +70,8 @@ router.get(
 
 router.put(
     "/admin/:orderID/status",
+    authMiddleware,
+    adminOnly,
     updateOrderStatusAdmin
 );
 
@@ -87,6 +93,7 @@ router.get(
 
 router.delete(
     "/:orderID",
+    authMiddleware,
     deleteOrder
 );
 
