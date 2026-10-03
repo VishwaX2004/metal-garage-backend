@@ -6,10 +6,8 @@ import {
     payHereNotify,
 } from "../controllers/payhereController.js";
 
-
 const router =
     express.Router();
-
 
 /* =============================================================
    CREATE PAYHERE PAYMENT
@@ -17,7 +15,7 @@ const router =
    POST
    /api/payments/payhere/create
 
-   Authentication required
+   JWT authentication required.
 ============================================================= */
 
 router.post(
@@ -26,22 +24,20 @@ router.post(
     createPayHerePayment
 );
 
-
 /* =============================================================
    PAYHERE NOTIFICATION
 
    POST
    /api/payments/payhere/notify
 
-   NO JWT AUTH HERE
+   NO JWT AUTHENTICATION.
 
-   PayHere itself calls this endpoint.
+   PayHere calls this endpoint directly.
 ============================================================= */
 
 router.post(
     "/notify",
     payHereNotify
 );
-
 
 export default router;

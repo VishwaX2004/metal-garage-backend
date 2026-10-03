@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import Order from "../models/order.js";
 import Product from "../models/product.js";
 
-
 /* =============================================================
    PAYHERE CONFIG
 ============================================================= */
@@ -12,9 +11,7 @@ import Product from "../models/product.js";
 const PAYHERE_ACTION_URL =
     "https://sandbox.payhere.lk/pay/checkout";
 
-const CURRENCY =
-    "LKR";
-
+const CURRENCY = "LKR";
 
 /* =============================================================
    HELPERS
@@ -23,11 +20,27 @@ const CURRENCY =
 function md5(value) {
     return crypto
         .createHash("md5")
-        .update(String(value))
+        .update(String(value), "utf8")
         .digest("hex");
 }
 
+/*
+    PayHere Checkout hash:
 
+    hash =
+    UPPERCASE(
+        MD5(
+            merchant_id +
+            order_id +
+            amount +
+            currency +
+            UPPERCASE(MD5(merchant_secret))
+        )
+    )
+
+    IMPORTANT:
+    Hash must be generated on backend only.
+*/
 function generatePayHereHash({
     merchantId,
     orderId,
@@ -35,27 +48,24 @@ function generatePayHereHash({
     currency,
     merchantSecret,
 }) {
-    const formattedAmount =
-        Number(amount).toFixed(2);
+    const formattedAmount = Number(amount).toFixed(2);
 
-    const hashedSecret =
-        md5(
-            merchantSecret
-        ).toUpperCase();
-
-    return md5(
-        merchantId +
-        orderId +
-        formattedAmount +
-        currency +
-        hashedSecret
+    const hashedSecret = md5(
+        merchantSecret
     ).toUpperCase();
+
+    const hashString =
+        String(merchantId) +
+        String(orderId) +
+        formattedAmount +
+        String(currency) +
+        hashedSecret;
+
+    return md5(hashString).toUpperCase();
 }
 
-
 function getTokenFromRequest(req) {
-    const header =
-        req.headers.authorization;
+    const header = req.headers.authorization;
 
     if (
         !header ||
@@ -67,7 +77,6 @@ function getTokenFromRequest(req) {
     return header.substring(7);
 }
 
-
 function getUserIDFromToken(req) {
     return (
         req.user?.userID ||
@@ -77,7 +86,6 @@ function getUserIDFromToken(req) {
         null
     );
 }
-
 
 /* =============================================================
    AUTHENTICATION
@@ -92,14 +100,25 @@ export function authenticatePayHereUser(
         const token =
             getTokenFromRequest(req);
 
-
         if (!token) {
             return res.status(401).json({
+                success: false,
                 message:
                     "Authentication token is required.",
             });
         }
 
+        if (!process.env.JWT_SECRET) {
+            console.error(
+                "JWT_SECRET is missing."
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    "Server authentication configuration is missing.",
+            });
+        }
 
         const decoded =
             jwt.verify(
@@ -107,13 +126,9 @@ export function authenticatePayHereUser(
                 process.env.JWT_SECRET
             );
 
-
-        req.user =
-            decoded;
-
+        req.user = decoded;
 
         next();
-
     } catch (error) {
         console.error(
             "PayHere auth error:",
@@ -121,16 +136,19 @@ export function authenticatePayHereUser(
         );
 
         return res.status(401).json({
+            success: false,
             message:
                 "Invalid or expired authentication token.",
         });
     }
 }
 
-
 /* =============================================================
    CREATE PAYHERE PAYMENT
-   POST /api/payments/payhere/create
+
+   POST
+   /api/payments/payhere/create
+
 ============================================================= */
 
 export async function createPayHerePayment(
@@ -138,30 +156,26 @@ export async function createPayHerePayment(
     res
 ) {
     try {
-        const {
-            orderId,
-        } = req.body;
-
+        const { orderId } = req.body;
 
         if (!orderId) {
             return res.status(400).json({
+                success: false,
                 message:
                     "Order ID is required.",
             });
         }
 
-
         const userID =
             getUserIDFromToken(req);
 
-
         if (!userID) {
             return res.status(401).json({
+                success: false,
                 message:
                     "User authentication is required.",
             });
         }
-
 
         /* =====================================================
            FIND ORDER
@@ -169,24 +183,20 @@ export async function createPayHerePayment(
 
         const order =
             await Order.findOne({
-                orderID:
-                    String(orderId),
-
-                userID:
-                    String(userID),
+                orderID: String(orderId),
+                userID: String(userID),
             });
-
 
         if (!order) {
             return res.status(404).json({
+                success: false,
                 message:
                     "Order not found or you do not have permission to pay for this order.",
             });
         }
 
-
         /* =====================================================
-           VALIDATE PAYMENT
+           VALIDATE PAYMENT METHOD
         ===================================================== */
 
         if (
@@ -194,108 +204,228 @@ export async function createPayHerePayment(
             "PayHere"
         ) {
             return res.status(400).json({
+                success: false,
                 message:
                     "This order is not configured for PayHere.",
             });
         }
 
+        /* =====================================================
+           VALIDATE PAYMENT STATUS
+        ===================================================== */
 
         if (
             order.paymentStatus ===
             "Paid"
         ) {
             return res.status(400).json({
+                success: false,
                 message:
                     "This order has already been paid.",
             });
         }
-
 
         if (
             order.paymentStatus !==
             "Pending"
         ) {
             return res.status(400).json({
+                success: false,
                 message:
                     "This order is not available for payment.",
             });
         }
 
+        /* =====================================================
+           PAYHERE ENVIRONMENT
+        ===================================================== */
+
+        const merchantId =
+            process.env.PAYHERE_MERCHANT_ID;
+
+        const merchantSecret =
+            process.env.PAYHERE_MERCHANT_SECRET;
+
+        const notifyUrl =
+            process.env.PAYHERE_NOTIFY_URL;
+
+        const frontendUrl =
+            process.env.FRONTEND_URL ||
+            "https://metal-garage.vercel.app";
+
+        const returnUrl =
+            process.env.PAYHERE_RETURN_URL ||
+            `${frontendUrl.replace(/\/+$/, "")}/payment/success`;
+
+        const cancelUrl =
+            process.env.PAYHERE_CANCEL_URL ||
+            `${frontendUrl.replace(/\/+$/, "")}/payment/cancel`;
 
         /* =====================================================
            ENV VALIDATION
         ===================================================== */
 
-        const merchantId =
-            process.env
-                .PAYHERE_MERCHANT_ID;
-
-        const merchantSecret =
-            process.env
-                .PAYHERE_MERCHANT_SECRET;
-
-        const notifyUrl =
-            process.env
-                .PAYHERE_NOTIFY_URL;
-
-        const frontendUrl =
-            process.env
-                .FRONTEND_URL ||
-            "https://metal-garage.vercel.app";
-
-
-        if (
-            !merchantId ||
-            !merchantSecret ||
-            !notifyUrl
-        ) {
+        if (!merchantId) {
             console.error(
-                "PayHere environment variables are missing."
+                "PAYHERE_MERCHANT_ID is missing."
             );
 
             return res.status(500).json({
+                success: false,
                 message:
-                    "PayHere is not configured correctly on the server.",
+                    "PayHere Merchant ID is not configured.",
             });
         }
 
+        if (!merchantSecret) {
+            console.error(
+                "PAYHERE_MERCHANT_SECRET is missing."
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    "PayHere Merchant Secret is not configured.",
+            });
+        }
+
+        if (!notifyUrl) {
+            console.error(
+                "PAYHERE_NOTIFY_URL is missing."
+            );
+
+            return res.status(500).json({
+                success: false,
+                message:
+                    "PayHere notification URL is not configured.",
+            });
+        }
 
         /* =====================================================
-           CUSTOMER NAME
+           CUSTOMER
         ===================================================== */
+
+        const shippingAddress =
+            order.shippingAddress || {};
 
         const fullName =
             String(
-                order.shippingAddress
-                    ?.fullName || ""
+                shippingAddress.fullName ||
+                    ""
             ).trim();
 
-
         const nameParts =
-            fullName.split(
-                /\s+/
-            );
-
+            fullName
+                ? fullName.split(/\s+/)
+                : [];
 
         const firstName =
             nameParts.shift() ||
             "Customer";
 
-
         const lastName =
             nameParts.join(" ") ||
             "Customer";
 
+        const email =
+            String(
+                shippingAddress.email ||
+                    order.customerEmail ||
+                    ""
+            ).trim();
+
+        const phone =
+            String(
+                shippingAddress.phone ||
+                    ""
+            ).trim();
+
+        const address =
+            String(
+                shippingAddress.address ||
+                    ""
+            ).trim();
+
+        const city =
+            String(
+                shippingAddress.city ||
+                    ""
+            ).trim();
+
+        /* =====================================================
+           VALIDATE CUSTOMER DATA
+        ===================================================== */
+
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Customer email is required for PayHere.",
+            });
+        }
+
+        if (!phone) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Customer phone number is required for PayHere.",
+            });
+        }
+
+        if (!address) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Customer address is required for PayHere.",
+            });
+        }
+
+        if (!city) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Customer city is required for PayHere.",
+            });
+        }
 
         /* =====================================================
            AMOUNT
+
+           IMPORTANT:
+           The amount used here MUST be exactly the same
+           amount used when generating the PayHere hash.
         ===================================================== */
 
         const amount =
-            Number(
-                order.total
-            ).toFixed(2);
+            Number(order.total).toFixed(2);
 
+        if (
+            !Number.isFinite(
+                Number(order.total)
+            ) ||
+            Number(order.total) <= 0
+        ) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Invalid order total.",
+            });
+        }
+
+        /* =====================================================
+           ORDER ID
+        ===================================================== */
+
+        const payHereOrderId =
+            String(order.orderID).trim();
+
+        if (!payHereOrderId) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "Invalid order ID.",
+            });
+        }
 
         /* =====================================================
            HASH
@@ -304,56 +434,38 @@ export async function createPayHerePayment(
         const hash =
             generatePayHereHash({
                 merchantId,
-                orderId:
-                    order.orderID,
+                orderId: payHereOrderId,
                 amount,
-                currency:
-                    CURRENCY,
+                currency: CURRENCY,
                 merchantSecret,
             });
-
-
-        /* =====================================================
-           RETURN / CANCEL URL
-        ===================================================== */
-
-        const returnUrl =
-            `${
-                frontendUrl.replace(
-                    /\/$/,
-                    ""
-                )
-            }/payment/success?order_id=${encodeURIComponent(
-                order.orderID
-            )}`;
-
-
-        const cancelUrl =
-            `${
-                frontendUrl.replace(
-                    /\/$/,
-                    ""
-                )
-            }/payment/cancel?order_id=${encodeURIComponent(
-                order.orderID
-            )}`;
-
 
         /* =====================================================
            ITEM DESCRIPTION
         ===================================================== */
 
         const items =
-            order.items
-                .map(
-                    (item) =>
-                        `${item.name} x${item.quantity}`
-                )
-                .join(", ");
+            Array.isArray(order.items)
+                ? order.items
+                      .map((item) => {
+                          const name =
+                              String(
+                                  item.name ||
+                                      "Product"
+                              ).trim();
 
+                          const quantity =
+                              Number(
+                                  item.quantity
+                              ) || 1;
+
+                          return `${name} x${quantity}`;
+                      })
+                      .join(", ")
+                : "";
 
         /* =====================================================
-           PAYHERE FORM DATA
+           PAYHERE PAYMENT DATA
         ===================================================== */
 
         const payment = {
@@ -361,7 +473,7 @@ export async function createPayHerePayment(
                 PAYHERE_ACTION_URL,
 
             merchant_id:
-                merchantId,
+                String(merchantId),
 
             return_url:
                 returnUrl,
@@ -378,31 +490,23 @@ export async function createPayHerePayment(
             last_name:
                 lastName,
 
-            email:
-                order.shippingAddress
-                    .email,
+            email,
 
-            phone:
-                order.shippingAddress
-                    .phone,
+            phone,
 
-            address:
-                order.shippingAddress
-                    .address,
+            address,
 
-            city:
-                order.shippingAddress
-                    .city,
+            city,
 
             country:
                 "Sri Lanka",
 
             order_id:
-                order.orderID,
+                payHereOrderId,
 
             items:
                 items ||
-                `Metal Garage Order ${order.orderID}`,
+                `Metal Garage Order ${payHereOrderId}`,
 
             currency:
                 CURRENCY,
@@ -412,38 +516,43 @@ export async function createPayHerePayment(
             hash,
 
             delivery_address:
-                order.shippingAddress
-                    .address,
+                address,
 
             delivery_city:
-                order.shippingAddress
-                    .city,
+                city,
 
             delivery_country:
                 "Sri Lanka",
         };
 
+        /* =====================================================
+           DEBUG LOG
+
+           DO NOT log merchantSecret.
+        ===================================================== */
 
         console.log(
             "PayHere payment created:",
             {
+                merchantId,
                 orderId:
-                    order.orderID,
-
+                    payHereOrderId,
                 amount,
-
                 currency:
                     CURRENCY,
+                action:
+                    PAYHERE_ACTION_URL,
+                notifyUrl,
+                returnUrl,
+                cancelUrl,
+                hash,
             }
         );
 
-
         return res.status(200).json({
             success: true,
-
             payment,
         });
-
     } catch (error) {
         console.error(
             "Create PayHere payment error:",
@@ -451,74 +560,61 @@ export async function createPayHerePayment(
         );
 
         return res.status(500).json({
+            success: false,
             message:
                 "Unable to start PayHere payment.",
         });
     }
 }
 
-
 /* =============================================================
-   RELEASE STOCK
+   RELEASE ORDER STOCK
 ============================================================= */
 
-async function releaseOrderStock(
-    order
-) {
-    if (
-        order.stockReleased
-    ) {
+async function releaseOrderStock(order) {
+    if (order.stockReleased) {
         return;
     }
 
-
-    for (
-        const item of order.items
-    ) {
+    for (const item of order.items) {
         const product =
             await Product.findOneAndUpdate(
                 {
                     productID:
                         item.productID,
                 },
-
                 {
                     $inc: {
                         quantity:
-                            item.quantity,
+                            Number(
+                                item.quantity
+                            ) || 0,
                     },
                 },
-
                 {
                     new: true,
                 }
             );
 
-
         if (!product) {
             continue;
         }
-
 
         const quantity =
             Number(
                 product.quantity
             ) || 0;
 
-
         await Product.findOneAndUpdate(
             {
                 productID:
                     item.productID,
             },
-
             {
                 $set: {
                     quantity,
-
                     inStock:
                         quantity > 0,
-
                     status:
                         quantity > 0
                             ? "Active"
@@ -528,17 +624,19 @@ async function releaseOrderStock(
         );
     }
 
-
-    order.stockReleased =
-        true;
+    order.stockReleased = true;
 
     await order.save();
 }
 
-
 /* =============================================================
    PAYHERE NOTIFICATION
-   POST /api/payments/payhere/notify
+
+   POST
+   /api/payments/payhere/notify
+
+   IMPORTANT:
+   This endpoint must NOT use JWT authentication.
 ============================================================= */
 
 export async function payHereNotify(
@@ -547,11 +645,11 @@ export async function payHereNotify(
 ) {
     try {
         console.log(
-            "=============================="
+            "================================"
         );
 
         console.log(
-            "PAYHERE NOTIFICATION"
+            "PAYHERE NOTIFICATION RECEIVED"
         );
 
         console.log(
@@ -559,9 +657,8 @@ export async function payHereNotify(
         );
 
         console.log(
-            "=============================="
+            "================================"
         );
-
 
         const {
             merchant_id,
@@ -573,103 +670,125 @@ export async function payHereNotify(
             md5sig,
             method,
             status_message,
-        } = req.body;
-
+        } = req.body || {};
 
         /* =====================================================
-           REQUIRED VALUES
+           REQUIRED PARAMETERS
         ===================================================== */
 
         if (
             !merchant_id ||
             !order_id ||
-            !payhere_amount ||
+            payhere_amount === undefined ||
             !payhere_currency ||
-            !status_code ||
+            status_code === undefined ||
             !md5sig
         ) {
-            return res.status(400).send(
-                "Missing notification parameters"
+            console.error(
+                "Missing PayHere notification parameters."
             );
+
+            return res
+                .status(400)
+                .send(
+                    "Missing notification parameters"
+                );
         }
 
-
         /* =====================================================
-           VERIFY MERCHANT
+           VERIFY MERCHANT ID
         ===================================================== */
+
+        const configuredMerchantId =
+            process.env.PAYHERE_MERCHANT_ID;
 
         if (
             String(merchant_id) !==
-            String(
-                process.env
-                    .PAYHERE_MERCHANT_ID
-            )
+            String(configuredMerchantId)
         ) {
             console.error(
-                "Invalid merchant ID."
+                "Invalid PayHere merchant ID."
             );
 
-            return res.status(400).send(
-                "Invalid merchant"
-            );
+            return res
+                .status(400)
+                .send(
+                    "Invalid merchant"
+                );
         }
 
-
         /* =====================================================
-           GENERATE LOCAL SIGNATURE
+           MERCHANT SECRET
         ===================================================== */
 
         const merchantSecret =
-            process.env
-                .PAYHERE_MERCHANT_SECRET;
+            process.env.PAYHERE_MERCHANT_SECRET;
 
+        if (!merchantSecret) {
+            console.error(
+                "PAYHERE_MERCHANT_SECRET is missing."
+            );
+
+            return res
+                .status(500)
+                .send(
+                    "PayHere configuration error"
+                );
+        }
+
+        /* =====================================================
+           VERIFY PAYHERE MD5 SIGNATURE
+
+           md5sig =
+           MD5(
+               merchant_id +
+               order_id +
+               payhere_amount +
+               payhere_currency +
+               status_code +
+               MD5(merchant_secret)
+           )
+        ===================================================== */
 
         const hashedSecret =
             md5(
                 merchantSecret
             ).toUpperCase();
 
-
         const localMd5Sig =
             md5(
                 String(
                     merchant_id
                 ) +
-                String(
-                    order_id
-                ) +
-                String(
-                    payhere_amount
-                ) +
-                String(
-                    payhere_currency
-                ) +
-                String(
-                    status_code
-                ) +
-                hashedSecret
+                    String(
+                        order_id
+                    ) +
+                    String(
+                        payhere_amount
+                    ) +
+                    String(
+                        payhere_currency
+                    ) +
+                    String(
+                        status_code
+                    ) +
+                    hashedSecret
             ).toUpperCase();
-
-
-        /* =====================================================
-           SIGNATURE CHECK
-        ===================================================== */
 
         if (
             localMd5Sig !==
-            String(
-                md5sig
-            ).toUpperCase()
+            String(md5sig).toUpperCase()
         ) {
             console.error(
                 "Invalid PayHere MD5 signature."
             );
 
-            return res.status(400).send(
-                "Invalid signature"
-            );
+            return res
+                .status(400)
+                .send(
+                    "Invalid signature"
+                );
         }
-
 
         /* =====================================================
            FIND ORDER
@@ -681,18 +800,18 @@ export async function payHereNotify(
                     String(order_id),
             });
 
-
         if (!order) {
             console.error(
-                "Order not found:",
+                "PayHere order not found:",
                 order_id
             );
 
-            return res.status(404).send(
-                "Order not found"
-            );
+            return res
+                .status(404)
+                .send(
+                    "Order not found"
+                );
         }
-
 
         /* =====================================================
            VERIFY AMOUNT
@@ -703,33 +822,33 @@ export async function payHereNotify(
                 payhere_amount
             ).toFixed(2);
 
-
         const expectedAmount =
             Number(
                 order.total
             ).toFixed(2);
-
 
         if (
             receivedAmount !==
             expectedAmount
         ) {
             console.error(
-                "Payment amount mismatch.",
+                "PayHere payment amount mismatch:",
                 {
+                    orderId:
+                        order.orderID,
                     expected:
                         expectedAmount,
-
                     received:
                         receivedAmount,
                 }
             );
 
-            return res.status(400).send(
-                "Amount mismatch"
-            );
+            return res
+                .status(400)
+                .send(
+                    "Amount mismatch"
+                );
         }
-
 
         /* =====================================================
            VERIFY CURRENCY
@@ -739,17 +858,24 @@ export async function payHereNotify(
             String(
                 payhere_currency
             ).toUpperCase() !==
-            "LKR"
+            CURRENCY
         ) {
-            return res.status(400).send(
-                "Currency mismatch"
+            console.error(
+                "PayHere currency mismatch."
             );
+
+            return res
+                .status(400)
+                .send(
+                    "Currency mismatch"
+                );
         }
 
-
         /* =====================================================
-           SUCCESS
-           STATUS = 2
+           PAYMENT SUCCESS
+
+           PayHere:
+           2 = Success
         ===================================================== */
 
         if (
@@ -757,21 +883,23 @@ export async function payHereNotify(
             "2"
         ) {
             /*
-             * Idempotency:
-             * If PayHere sends the same successful
-             * notification more than once, do not
-             * modify the order again.
+             * Idempotency protection.
              */
 
             if (
                 order.paymentStatus ===
                 "Paid"
             ) {
-                return res.status(200).send(
-                    "Already processed"
+                console.log(
+                    `PayHere payment already processed: ${order.orderID}`
                 );
-            }
 
+                return res
+                    .status(200)
+                    .send(
+                        "Already processed"
+                    );
+            }
 
             order.paymentStatus =
                 "Paid";
@@ -779,8 +907,8 @@ export async function payHereNotify(
             order.paymentId =
                 payment_id
                     ? String(
-                        payment_id
-                    )
+                          payment_id
+                      )
                     : null;
 
             order.paymentGateway =
@@ -794,39 +922,32 @@ export async function payHereNotify(
             order.paymentMessage =
                 status_message
                     ? String(
-                        status_message
-                    )
+                          status_message
+                      )
                     : null;
 
             order.paidAt =
                 new Date();
 
-            /*
-             * Order can now move into
-             * confirmed state.
-             */
-
             order.orderStatus =
                 "Confirmed";
 
-
             await order.save();
 
-
             console.log(
-                `PayHere payment SUCCESS for ${order.orderID}`
+                `PayHere payment SUCCESS: ${order.orderID}`
             );
 
-
-            return res.status(200).send(
-                "OK"
-            );
+            return res
+                .status(200)
+                .send("OK");
         }
 
-
         /* =====================================================
-           PENDING
-           STATUS = 0
+           PAYMENT PENDING
+
+           PayHere:
+           0 = Pending
         ===================================================== */
 
         if (
@@ -842,21 +963,23 @@ export async function payHereNotify(
             order.paymentMessage =
                 status_message
                     ? String(
-                        status_message
-                    )
+                          status_message
+                      )
                     : null;
 
             await order.save();
 
-
-            return res.status(200).send(
-                "OK"
-            );
+            return res
+                .status(200)
+                .send("OK");
         }
 
-
         /* =====================================================
-           CANCELLED / FAILED
+           PAYMENT CANCELLED / FAILED
+
+           PayHere:
+           -1 = Cancelled
+           -2 = Failed
         ===================================================== */
 
         if (
@@ -865,6 +988,14 @@ export async function payHereNotify(
             String(status_code) ===
                 "-2"
         ) {
+            /*
+             * Avoid releasing stock multiple times.
+             */
+
+            const wasAlreadyFailed =
+                order.paymentStatus ===
+                "Failed";
+
             order.paymentStatus =
                 "Failed";
 
@@ -874,8 +1005,8 @@ export async function payHereNotify(
             order.paymentId =
                 payment_id
                     ? String(
-                        payment_id
-                    )
+                          payment_id
+                      )
                     : null;
 
             order.paymentMethodUsed =
@@ -886,33 +1017,28 @@ export async function payHereNotify(
             order.paymentMessage =
                 status_message
                     ? String(
-                        status_message
-                    )
+                          status_message
+                      )
                     : null;
-
 
             await order.save();
 
+            if (!wasAlreadyFailed) {
+                await releaseOrderStock(
+                    order
+                );
+            }
 
-            /*
-             * Restore stock because this payment
-             * did not complete.
-             */
-
-            await releaseOrderStock(
-                order
-            );
-
-
-            return res.status(200).send(
-                "OK"
-            );
+            return res
+                .status(200)
+                .send("OK");
         }
-
 
         /* =====================================================
            CHARGEBACK
-           STATUS = -3
+
+           PayHere:
+           -3 = Chargeback
         ===================================================== */
 
         if (
@@ -928,39 +1054,49 @@ export async function payHereNotify(
             order.paymentId =
                 payment_id
                     ? String(
-                        payment_id
-                    )
+                          payment_id
+                      )
                     : null;
 
             order.paymentMessage =
                 status_message
                     ? String(
-                        status_message
-                    )
+                          status_message
+                      )
                     : null;
-
 
             await order.save();
 
-
-            return res.status(200).send(
-                "OK"
-            );
+            return res
+                .status(200)
+                .send("OK");
         }
 
+        /* =====================================================
+           UNKNOWN STATUS
 
-        return res.status(200).send(
-            "OK"
+           Still acknowledge PayHere so it doesn't endlessly
+           retry the notification.
+        ===================================================== */
+
+        console.warn(
+            "Unknown PayHere status:",
+            status_code
         );
 
+        return res
+            .status(200)
+            .send("OK");
     } catch (error) {
         console.error(
-            "PayHere notify error:",
+            "PayHere notification error:",
             error
         );
 
-        return res.status(500).send(
-            "Server error"
-        );
+        return res
+            .status(500)
+            .send(
+                "Server error"
+            );
     }
 }
