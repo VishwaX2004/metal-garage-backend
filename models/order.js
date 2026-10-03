@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 
-// =============================================================
-// ORDER ITEM SCHEMA
-// =============================================================
+/* =============================================================
+   ORDER ITEM SCHEMA
+============================================================= */
 
 const orderItemSchema = new mongoose.Schema(
     {
@@ -46,9 +46,10 @@ const orderItemSchema = new mongoose.Schema(
     }
 );
 
-// =============================================================
-// SHIPPING ADDRESS SCHEMA
-// =============================================================
+
+/* =============================================================
+   SHIPPING ADDRESS SCHEMA
+============================================================= */
 
 const shippingAddressSchema =
     new mongoose.Schema(
@@ -107,127 +108,223 @@ const shippingAddressSchema =
         }
     );
 
-// =============================================================
-// ORDER SCHEMA
-// =============================================================
 
-const orderSchema = new mongoose.Schema(
-    {
-        orderID: {
-            type: String,
-            required: true,
-            unique: true,
-            trim: true,
-            index: true,
-        },
+/* =============================================================
+   ORDER SCHEMA
+============================================================= */
 
-        userID: {
-            type: String,
-            default: null,
-            trim: true,
-            index: true,
-        },
+const orderSchema =
+    new mongoose.Schema(
+        {
+            orderID: {
+                type: String,
+                required: true,
+                unique: true,
+                trim: true,
+                index: true,
+            },
 
-        customerEmail: {
-            type: String,
-            required: true,
-            trim: true,
-            lowercase: true,
-        },
+            userID: {
+                type: String,
+                default: null,
+                trim: true,
+                index: true,
+            },
 
-        items: {
-            type: [orderItemSchema],
-            required: true,
+            customerEmail: {
+                type: String,
+                required: true,
+                trim: true,
+                lowercase: true,
+            },
 
-            validate: {
-                validator: function (items) {
-                    return (
-                        Array.isArray(items) &&
-                        items.length > 0
-                    );
+            items: {
+                type: [orderItemSchema],
+                required: true,
+
+                validate: {
+                    validator: function (items) {
+                        return (
+                            Array.isArray(items) &&
+                            items.length > 0
+                        );
+                    },
+
+                    message:
+                        "Order must contain at least one product.",
                 },
+            },
 
-                message:
-                    "Order must contain at least one product.",
+            shippingAddress: {
+                type: shippingAddressSchema,
+                required: true,
+            },
+
+            subtotal: {
+                type: Number,
+                required: true,
+                min: 0,
+            },
+
+            tax: {
+                type: Number,
+                default: 0,
+                min: 0,
+            },
+
+            discount: {
+                type: Number,
+                default: 0,
+                min: 0,
+            },
+
+            total: {
+                type: Number,
+                required: true,
+                min: 0,
+            },
+
+            promoCode: {
+                type: String,
+                default: "",
+                trim: true,
+                uppercase: true,
+            },
+
+
+            /* =================================================
+               PAYMENT METHOD
+            ================================================= */
+
+            paymentMethod: {
+                type: String,
+
+                enum: [
+                    "Cash on Delivery",
+                    "PayHere",
+                ],
+
+                default:
+                    "Cash on Delivery",
+            },
+
+
+            /* =================================================
+               PAYMENT STATUS
+            ================================================= */
+
+            paymentStatus: {
+                type: String,
+
+                enum: [
+                    "Pending",
+                    "Paid",
+                    "Failed",
+                    "Refunded",
+                ],
+
+                default: "Pending",
+            },
+
+
+            /* =================================================
+               PAYHERE PAYMENT ID
+            ================================================= */
+
+            paymentId: {
+                type: String,
+                default: null,
+                trim: true,
+            },
+
+
+            /* =================================================
+               PAYMENT GATEWAY
+            ================================================= */
+
+            paymentGateway: {
+                type: String,
+                default: null,
+                trim: true,
+            },
+
+
+            /* =================================================
+               PAYMENT METHOD USED BY PAYHERE
+            ================================================= */
+
+            paymentMethodUsed: {
+                type: String,
+                default: null,
+                trim: true,
+            },
+
+
+            /* =================================================
+               PAYMENT MESSAGE
+            ================================================= */
+
+            paymentMessage: {
+                type: String,
+                default: null,
+                trim: true,
+            },
+
+
+            /* =================================================
+               PAID DATE
+            ================================================= */
+
+            paidAt: {
+                type: Date,
+                default: null,
+            },
+
+
+            /* =================================================
+               STOCK RELEASE PROTECTION
+            ================================================= */
+
+            stockReleased: {
+                type: Boolean,
+                default: false,
+            },
+
+
+            /* =================================================
+               ORDER STATUS
+            ================================================= */
+
+            orderStatus: {
+                type: String,
+
+                enum: [
+                    "Pending",
+                    "Confirmed",
+                    "Processing",
+                    "Shipped",
+                    "Delivered",
+                    "Cancelled",
+                ],
+
+                default: "Pending",
             },
         },
 
-        shippingAddress: {
-            type: shippingAddressSchema,
-            required: true,
-        },
+        {
+            timestamps: true,
+        }
+    );
 
-        subtotal: {
-            type: Number,
-            required: true,
-            min: 0,
-        },
 
-        discount: {
-            type: Number,
-            default: 0,
-            min: 0,
-        },
+/* =============================================================
+   MODEL
+============================================================= */
 
-        total: {
-            type: Number,
-            required: true,
-            min: 0,
-        },
-
-        promoCode: {
-            type: String,
-            default: "",
-            trim: true,
-            uppercase: true,
-        },
-
-        paymentMethod: {
-            type: String,
-            enum: [
-                "Cash on Delivery",
-            ],
-            default:
-                "Cash on Delivery",
-        },
-
-        paymentStatus: {
-            type: String,
-            enum: [
-                "Pending",
-                "Paid",
-                "Failed",
-                "Refunded",
-            ],
-            default: "Pending",
-        },
-
-        orderStatus: {
-            type: String,
-            enum: [
-                "Pending",
-                "Confirmed",
-                "Processing",
-                "Shipped",
-                "Delivered",
-                "Cancelled",
-            ],
-            default: "Pending",
-        },
-    },
-
-    {
-        timestamps: true,
-    }
-);
-
-// =============================================================
-// MODEL
-// =============================================================
-
-const Order = mongoose.model(
-    "Order",
-    orderSchema
-);
+const Order =
+    mongoose.model(
+        "Order",
+        orderSchema
+    );
 
 export default Order;
