@@ -318,6 +318,13 @@ export async function googleLogin(req, res) {
                 .trim()
                 .toLowerCase();
 
+        if (!normalizedEmail) {
+            return res.status(400).json({
+                message:
+                    "Valid email is required.",
+            });
+        }
+
         if (!process.env.JWT_SECRET) {
             console.error(
                 "JWT_SECRET is missing from .env"
@@ -335,45 +342,65 @@ export async function googleLogin(req, res) {
             });
 
         if (!user) {
-            // Create new user from Google data
-            const cleanFirstName =
-                (firstName || "").trim() ||
-                "User";
+            try {
+                // Create new user from Google data
+                const cleanFirstName =
+                    (firstName || "").trim() ||
+                    "User";
 
-            const cleanLastName =
-                (lastName || "").trim() ||
-                "";
+                const cleanLastName =
+                    (lastName || "").trim() ||
+                    "";
 
-            const userProfileImage =
-                profileImage ||
-                DEFAULT_PROFILE_IMAGE;
+                const userProfileImage =
+                    (profileImage || "").trim() ||
+                    DEFAULT_PROFILE_IMAGE;
 
-            user =
-                await User.create({
-                    email: normalizedEmail,
+                // Generate a random password for OAuth users
+                const randomPassword =
+                    Math.random().toString(36).substring(2, 15) +
+                    Math.random().toString(36).substring(2, 15);
 
-                    firstName:
-                        cleanFirstName,
-
-                    lastName:
-                        cleanLastName,
-
-                    password: await bcrypt.hash(
-                        Math.random().toString(36),
+                const hashedPassword =
+                    await bcrypt.hash(
+                        randomPassword,
                         10
-                    ),
+                    );
 
-                    role: "user",
+                user =
+                    await User.create({
+                        email: normalizedEmail,
 
-                    isBlock: false,
+                        firstName:
+                            cleanFirstName,
 
-                    isEmailVerified: true,
+                        lastName:
+                            cleanLastName,
 
-                    profileImage:
-                        userProfileImage,
+                        password: hashedPassword,
+
+                        role: "user",
+
+                        isBlock: false,
+
+                        isEmailVerified: true,
+
+                        profileImage:
+                            userProfileImage,
+                    });
+            } catch (createError) {
+                console.error(
+                    "Error creating Google user:",
+                    createError
+                );
+
+                return res.status(500).json({
+                    message:
+                        "Failed to create account from Google login.",
                 });
+            }
         } else {
-            // Update existing user if blocked
+            // Check if user is blocked
             if (user.isBlock) {
                 return res
                     .status(403)
