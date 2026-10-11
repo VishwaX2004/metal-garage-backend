@@ -293,6 +293,123 @@ export async function loginUser(req, res) {
 }
 
 // ============================================================
+// GOOGLE LOGIN
+// POST /api/users/google-login
+// ============================================================
+
+export async function googleLogin(req, res) {
+    try {
+        const {
+            email,
+            firstName,
+            lastName,
+            profileImage,
+        } = req.body;
+
+        if (!email) {
+            return res.status(400).json({
+                message:
+                    "Email is required for Google login.",
+            });
+        }
+
+        const normalizedEmail =
+            String(email)
+                .trim()
+                .toLowerCase();
+
+        if (!process.env.JWT_SECRET) {
+            console.error(
+                "JWT_SECRET is missing from .env"
+            );
+
+            return res.status(500).json({
+                message:
+                    "Server authentication configuration is missing.",
+            });
+        }
+
+        let user =
+            await User.findOne({
+                email: normalizedEmail,
+            });
+
+        if (!user) {
+            // Create new user from Google data
+            const cleanFirstName =
+                (firstName || "").trim() ||
+                "User";
+
+            const cleanLastName =
+                (lastName || "").trim() ||
+                "";
+
+            const userProfileImage =
+                profileImage ||
+                DEFAULT_PROFILE_IMAGE;
+
+            user =
+                await User.create({
+                    email: normalizedEmail,
+
+                    firstName:
+                        cleanFirstName,
+
+                    lastName:
+                        cleanLastName,
+
+                    password: await bcrypt.hash(
+                        Math.random().toString(36),
+                        10
+                    ),
+
+                    role: "user",
+
+                    isBlock: false,
+
+                    isEmailVerified: true,
+
+                    profileImage:
+                        userProfileImage,
+                });
+        } else {
+            // Update existing user if blocked
+            if (user.isBlock) {
+                return res
+                    .status(403)
+                    .json({
+                        message:
+                            "Your account has been blocked. Please contact support.",
+                    });
+            }
+        }
+
+        const token =
+            createUserToken(user);
+
+        return res.status(200).json({
+            message:
+                "Google login successful",
+
+            token,
+
+            user:
+                getPublicUser(user),
+        });
+    } catch (error) {
+        console.error(
+            "googleLogin error:",
+            error
+        );
+
+        return res.status(500).json({
+            message:
+                "Something went wrong while logging in with Google.",
+        });
+    }
+}
+
+// ============================================================
 // GET CURRENT USER
 // GET /api/users/me
 // ============================================================

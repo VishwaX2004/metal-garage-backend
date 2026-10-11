@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import {
     createUser,
     loginUser,
+    googleLogin,
     getMyProfile,
     updateMyProfile,
 
@@ -148,6 +149,14 @@ userRouter.post(
 userRouter.post(
     "/login",
     loginUser
+);
+
+// GOOGLE LOGIN
+// POST /api/users/google-login
+
+userRouter.post(
+    "/google-login",
+    googleLogin
 );
 
 /* ============================================================
