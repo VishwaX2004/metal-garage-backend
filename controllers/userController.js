@@ -171,6 +171,8 @@ export async function createUser(req, res) {
 
                 profileImage:
                     DEFAULT_PROFILE_IMAGE,
+
+                loginMethod: "email",
             });
 
         return res.status(201).json({
@@ -352,6 +354,7 @@ export async function googleLogin(req, res) {
                     (lastName || "").trim() ||
                     "";
 
+                // Use Gmail profile image if provided, otherwise use default
                 const userProfileImage =
                     (profileImage || "").trim() ||
                     DEFAULT_PROFILE_IMAGE;
@@ -387,6 +390,8 @@ export async function googleLogin(req, res) {
 
                         profileImage:
                             userProfileImage,
+
+                        loginMethod: "google",
                     });
             } catch (createError) {
                 console.error(
@@ -408,6 +413,25 @@ export async function googleLogin(req, res) {
                         message:
                             "Your account has been blocked. Please contact support.",
                     });
+            }
+
+            // Update profile image and login method if logging in via Google
+            if (profileImage) {
+                const cleanProfileImage =
+                    String(profileImage).trim();
+                if (
+                    cleanProfileImage &&
+                    cleanProfileImage !==
+                        user.profileImage
+                ) {
+                    user.profileImage =
+                        cleanProfileImage;
+
+                    user.loginMethod =
+                        "google";
+
+                    await user.save();
+                }
             }
         }
 
@@ -951,6 +975,8 @@ export async function createUserAdmin(
                     ),
 
                 profileImage: image,
+
+                loginMethod: "email",
             });
 
         return res.status(201).json({

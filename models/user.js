@@ -56,6 +56,15 @@ const userSchema = new mongoose.Schema(
             default:
                 DEFAULT_PROFILE_IMAGE,
         },
+
+        loginMethod: {
+            type: String,
+            enum: [
+                "email",
+                "google",
+            ],
+            default: "email",
+        },
     },
 
     {
